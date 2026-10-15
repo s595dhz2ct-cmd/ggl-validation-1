@@ -59,35 +59,45 @@ try {
     } finally { await browser.close(); }
   } else {
     fs.mkdirSync(path.join(root, '.tools/home'), { recursive: true, mode: 0o700 });
-    for (const preset of ['mobile', 'desktop']) {
-      const report = path.join(root, `lighthouse-${preset}.json`);
-      const args = [
-        path.join(root, '.tools/npm/check-tools/node_modules/lighthouse/cli/index.js'),
-        'http://127.0.0.1:8765/', '--output=json', `--output-path=${report}`,
-        `--chrome-flags=${flags.map(flag => `"${flag}"`).join(' ')}`, '--quiet',
-      ];
-      if (preset === 'desktop') args.push('--preset=desktop');
-      const child = spawn(process.execPath, args, {
-        cwd: root, env: { PATH: process.env.PATH, LANG: 'C.UTF-8', HOME: path.join(root, '.tools/home'), CHROME_PATH: shell },
-        stdio: ['ignore', 'ignore', 'pipe'], timeout: 60000, killSignal: 'SIGKILL',
-      });
-      let stderr = '';
-      child.stderr.on('data', chunk => { stderr = (stderr + chunk).slice(-8192); });
-      await new Promise((resolve, reject) => {
-        child.once('error', reject);
-        child.once('exit', code => {
-          if (code === 0) return resolve();
-          process.stderr.write(stderr + '\n');
-          reject(new Error('Lighthouse execution failed'));
+    // Lighthouse's own launcher cannot attach to the headless shell in this container,
+    // so Playwright starts the verified browser on a loopback-only debugging port.
+    const { chromium } = require(path.join(root, '.tools/npm/check-tools/node_modules/playwright-core'));
+    const port = 9222;
+    const browser = await chromium.launch({
+      executablePath: shell, headless: true, timeout: 15000,
+      args: [...flags, `--remote-debugging-port=${port}`, '--remote-debugging-address=127.0.0.1'],
+    });
+    try {
+      for (const preset of ['mobile', 'desktop']) {
+        const report = path.join(root, `lighthouse-${preset}.json`);
+        const args = [
+          path.join(root, '.tools/npm/check-tools/node_modules/lighthouse/cli/index.js'),
+          'http://127.0.0.1:8765/', '--output=json', `--output-path=${report}`,
+          `--port=${port}`, '--hostname=127.0.0.1', '--quiet',
+        ];
+        if (preset === 'desktop') args.push('--preset=desktop');
+        const child = spawn(process.execPath, args, {
+          cwd: root, env: { PATH: process.env.PATH, LANG: 'C.UTF-8', HOME: path.join(root, '.tools/home') },
+          stdio: ['ignore', 'ignore', 'pipe'], timeout: 60000, killSignal: 'SIGKILL',
         });
-      });
-      const result = JSON.parse(fs.readFileSync(report));
-      assert(!result.runtimeError && !result.runWarnings?.length, 'Lighthouse coverage incomplete');
-      for (const [category, floor] of Object.entries(pins.lighthouse_floors)) {
-        const score = result.categories?.[category]?.score;
-        assert(typeof score === 'number' && score >= floor / 100 && score <= 1, `Lighthouse ${category} floor/coverage failed`);
+        let stderr = '';
+        child.stderr.on('data', chunk => { stderr = (stderr + chunk).slice(-8192); });
+        await new Promise((resolve, reject) => {
+          child.once('error', reject);
+          child.once('exit', code => {
+            if (code === 0) return resolve();
+            process.stderr.write(stderr + '\n');
+            reject(new Error('Lighthouse execution failed'));
+          });
+        });
+        const result = JSON.parse(fs.readFileSync(report));
+        assert(!result.runtimeError && !result.runWarnings?.length, 'Lighthouse coverage incomplete');
+        for (const [category, floor] of Object.entries(pins.lighthouse_floors)) {
+          const score = result.categories?.[category]?.score;
+          assert(typeof score === 'number' && score >= floor / 100 && score <= 1, `Lighthouse ${category} floor/coverage failed`);
+        }
       }
-    }
+    } finally { await browser.close(); }
   }
   process.stdout.write(`PASS ${kind}: desktop and mobile\n`);
 } finally {
