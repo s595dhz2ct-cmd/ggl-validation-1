@@ -1,0 +1,20 @@
+rules:
+  - id: landing-no-command-execution
+    languages: [python]
+    severity: ERROR
+    message: Template code must not execute shell or model commands.
+    pattern-either:
+      - pattern: subprocess.$FUNC(..., shell=True, ...)
+      - pattern: os.system(...)
+      - pattern: eval(...)
+      - pattern: exec(...)
+  - id: landing-no-contact-sinks
+    languages: [javascript]
+    severity: ERROR
+    message: No contact logging, browser storage or unreviewed transport.
+    pattern-either:
+      - pattern: console.$FUNC(...)
+      - pattern: localStorage.$FUNC(...)
+      - pattern: sessionStorage.$FUNC(...)
+      - pattern: fetch(...)
+      - pattern: navigator.sendBeacon(...)

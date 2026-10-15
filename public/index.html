@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="A small weekly planning tool for independent makers. Join the early interest list.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'">
+  <title>Fieldnote — Room for the work that matters</title>
+  <link rel="icon" href="mark.svg" type="image/svg+xml"><link rel="stylesheet" href="styles.css">
+  <script src="waitlist.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="masthead"><a class="wordmark" href="index.html"><img src="mark.svg" alt="" width="28" height="28">Fieldnote</a><a class="nav-link" href="#waitlist">Get early access <span aria-hidden="true">↗</span></a></header>
+  <main id="main">
+    <section class="hero" aria-labelledby="headline">
+      <div class="hero-copy"><p class="eyebrow"><span class="dot"></span> A small idea, taking shape</p>
+        <h1 id="headline">Less admin. More room to make.</h1><p class="lede">A small weekly planning tool for independent makers. Help shape the first version.</p>
+        <a class="button" href="#waitlist">See what’s coming <span aria-hidden="true">↗</span></a><p class="caption">An early concept. Your interest helps decide what we build.</p>
+      </div>
+      <div class="work-sheet" aria-label="An illustrated weekly plan">
+        <div class="sheet-top"><span>THE WEEK AHEAD</span><span aria-hidden="true">01 / 03</span></div>
+        <p class="sheet-title">Make room.</p><p class="sheet-note">Three things. A little breathing space.</p>
+        <ol class="plan-lines"><li><span class="tick" aria-hidden="true">✓</span><span>Finish something meaningful</span></li><li><span class="circle" aria-hidden="true"></span><span>Clear one small loose end</span></li><li><span class="circle" aria-hidden="true"></span><span>Leave a little unplanned</span></li></ol>
+        <div class="sheet-foot"><span>Progress over busywork.</span><span class="sun" aria-hidden="true">✳</span></div>
+      </div>
+    </section>
+    <section class="principles" aria-label="What we’re exploring"><p class="eyebrow">A lighter way to plan</p><div class="principle"><span>01</span><div><h2>One clear view.</h2><p>A place for the week’s essentials, without another dashboard to maintain.</p></div></div><div class="principle"><span>02</span><div><h2>Built at your pace.</h2><p>We’re testing the idea before building it. No payment, no promise of a launch date.</p></div></div></section>
+    <section class="waitlist" id="waitlist" aria-labelledby="waitlist-heading"><div><p class="eyebrow">Help shape the first version</p><h2 id="waitlist-heading">Interested?<br>Leave a little signal.</h2><p>Join the interest list for this concept. Collection consent does not authorize marketing or automated email.</p></div>
+      <form id="waitlist-form" novalidate>
+        <label for="email">Your email</label><input id="email" name="email" type="email" autocomplete="email" maxlength="254" aria-describedby="privacy-short availability" required disabled>
+        <label class="consent"><input id="consent" type="checkbox" required disabled><span>I consent to storing my email locally in encrypted form for this interest test. I can withdraw consent or request deletion at any time.</span></label>
+        <p id="privacy-short" class="caption">Your address stays in encrypted storage on the owner’s machine. No tracking cookies or mailing automation. Deletion is due 90 days after the test ends unless the owner explicitly extends retention. <a href="privacy.html">Privacy notice</a> · <a href="rights.html">Unsubscribe or request deletion</a></p>
+        <button class="button" type="submit" disabled>Join the early list <span aria-hidden="true">↗</span></button>
+        <p id="availability" class="availability">Collection is not open yet. Please check back when the interest test opens.</p>
+        <p id="form-status" role="status" aria-live="polite" aria-atomic="true"></p>
+        <noscript><p>Collection is currently closed. No address will be submitted.</p></noscript>
+      </form>
+    </section>
+  </main>
+  <footer><span>A little space for better work.</span><nav aria-label="Footer"><a href="privacy.html">Privacy</a><a href="rights.html">Your data rights</a></nav><span>© 2026 · Early concept</span></footer>
+</body>
+</html>
