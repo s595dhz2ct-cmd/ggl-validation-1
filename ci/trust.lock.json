@@ -1,5 +1,4 @@
 {
-  "schema_version": 1,
   "editable": [
     "public/index.html"
   ],
@@ -19,7 +18,7 @@
     "ci/npm_tool.mjs": "12e1cd02d68d3931182b7cdc7cda9705ff8ab0ad2916f98c2137ad101cc6cbaa",
     "ci/pin_check.py": "57d16dfe1897cf36d054a626b23b6b18d96a95a3561f9cac460d5e103f655a24",
     "ci/pins.json": "03d974f361d2cc27e91486aab704caced16bfcdda030248914e156ad45fd806f",
-    "ci/playwright_e2e.mjs": "7df4966b2ecdcbed5fda694f830ba6861f42856a046bd6de7725eab91be40b98",
+    "ci/playwright_e2e.mjs": "b0ac1862a0c3f34a4671418d558a160006ba7a96fe5601add1e2f8ccbb7af74c",
     "ci/playwright_e2e.py": "91e0ac54e48f5b7bb18f1ff6b436644f9ac8b48f838cbe7a1c7772c556ffa3b2",
     "ci/release-pins.json": "79fe62e057f7b25035d2c6b1acfdc6e1a7ffa7759bf32d05cd9492fb969d7c9c",
     "ci/semgrep-constraints.txt": "81981e5b675b5fccb302a7d1a92c9f0aba3291de5efa9d486f634635b0d5c806",
@@ -34,5 +33,6 @@
     "rights.html": "f5eed943d32c8f15ca7dfbdd1ef77fb00bdca8006c809e8ff6a89089b5664640",
     "styles.css": "a2c61e6b404017a7b7334946f2775ffb3006fe6756367ff90162a80c620d258b",
     "waitlist.js": "eb30724712e6de76f64c2b971da98cb7951081d08302de9763ec771647174cbf"
-  }
+  },
+  "schema_version": 1
 }

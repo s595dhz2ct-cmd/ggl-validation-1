@@ -58,6 +58,7 @@ try {
       }
     } finally { await browser.close(); }
   } else {
+    fs.mkdirSync(path.join(root, '.tools/home'), { recursive: true, mode: 0o700 });
     for (const preset of ['mobile', 'desktop']) {
       const report = path.join(root, `lighthouse-${preset}.json`);
       const args = [
@@ -68,11 +69,17 @@ try {
       if (preset === 'desktop') args.push('--preset=desktop');
       const child = spawn(process.execPath, args, {
         cwd: root, env: { PATH: process.env.PATH, LANG: 'C.UTF-8', HOME: path.join(root, '.tools/home'), CHROME_PATH: shell },
-        stdio: 'ignore', timeout: 60000, killSignal: 'SIGKILL',
+        stdio: ['ignore', 'ignore', 'pipe'], timeout: 60000, killSignal: 'SIGKILL',
       });
+      let stderr = '';
+      child.stderr.on('data', chunk => { stderr = (stderr + chunk).slice(-8192); });
       await new Promise((resolve, reject) => {
         child.once('error', reject);
-        child.once('exit', code => code === 0 ? resolve() : reject(new Error('Lighthouse execution failed')));
+        child.once('exit', code => {
+          if (code === 0) return resolve();
+          process.stderr.write(stderr + '\n');
+          reject(new Error('Lighthouse execution failed'));
+        });
       });
       const result = JSON.parse(fs.readFileSync(report));
       assert(!result.runtimeError && !result.runWarnings?.length, 'Lighthouse coverage incomplete');
