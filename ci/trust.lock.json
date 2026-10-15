@@ -1,11 +1,11 @@
 {
+  "schema_version": 1,
   "editable": [
     "public/index.html"
   ],
   "files": {
     ".github/workflows/ci.yml": "cd26dd5cedf2ef097138e402e2f3c33960a8cfee606fd2944fee3bc1c607eb1f",
-    ".github/workflows/release.yml": "3d79bf38ee31d1bf0da8c4f6577016d0806f23fd6979f83da5becbc379d98e0d",
-    "README.md": "6761f53b0a01128630f76ca94219c57f6edda761950c1187f47621a251ed7173",
+    "README.md": "5e24ea838631881aa89c29347667c28aefaa8aa4bb406130c286cbf851404b5a",
     "ci/artifact.lock.json": "07cc11fb200994512d7dbe6302416ad68eacee3d6fa780222f97eb5a95878a64",
     "ci/check-tools/package-lock.json": "972a79b6f47347294ff9c63297e8783696e1d17324b6d6f18748b791883b0e60",
     "ci/check-tools/package.json": "d7f60cd923489408a21ecaa21bbdbd0af63cf077db5fdcbb67512b477abe6268",
@@ -16,11 +16,11 @@
     "ci/licenses.lock.json": "716f494b7522b31b192c0a22fd435602b391d17b06fe15a1fc804ee2fc3b5cb6",
     "ci/lighthouse_check.py": "7fe559d55f8b7bf70b01f3a0e4090c1563d1509f4adef4e35ea883ee14d37cc3",
     "ci/npm_tool.mjs": "12e1cd02d68d3931182b7cdc7cda9705ff8ab0ad2916f98c2137ad101cc6cbaa",
-    "ci/pin_check.py": "57d16dfe1897cf36d054a626b23b6b18d96a95a3561f9cac460d5e103f655a24",
+    "ci/pin_check.py": "53a4f9f38d6a9a29281fa8ba1f4359fcd2bb3067e6cd04617fb04174967aea37",
     "ci/pins.json": "03d974f361d2cc27e91486aab704caced16bfcdda030248914e156ad45fd806f",
     "ci/playwright_e2e.mjs": "8f21aaca4c4c0be0826a80f67a76724bc816f21894e6267f7695d2beb7b3839c",
     "ci/playwright_e2e.py": "91e0ac54e48f5b7bb18f1ff6b436644f9ac8b48f838cbe7a1c7772c556ffa3b2",
-    "ci/release-pins.json": "79fe62e057f7b25035d2c6b1acfdc6e1a7ffa7759bf32d05cd9492fb969d7c9c",
+    "ci/release-pins.json": "b9c67f594a1216c91f3d886dd2427272385232bfeffe682d8d44c905ecfe5138",
     "ci/semgrep-constraints.txt": "81981e5b675b5fccb302a7d1a92c9f0aba3291de5efa9d486f634635b0d5c806",
     "ci/semgrep-requirements.txt": "b6bc07079e6d2bffea1fa92f721bcd7ceb8a82170ec5fef4b34491321d5ebb0f",
     "ci/semgrep.yml": "d24572bb495e14b0e27b0aadf709b73adce07d17f0e878a01ba6837fc57ad7bd",
@@ -33,6 +33,5 @@
     "rights.html": "f5eed943d32c8f15ca7dfbdd1ef77fb00bdca8006c809e8ff6a89089b5664640",
     "styles.css": "a2c61e6b404017a7b7334946f2775ffb3006fe6756367ff90162a80c620d258b",
     "waitlist.js": "eb30724712e6de76f64c2b971da98cb7951081d08302de9763ec771647174cbf"
-  },
-  "schema_version": 1
+  }
 }
