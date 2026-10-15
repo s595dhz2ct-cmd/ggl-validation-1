@@ -69,5 +69,17 @@
         "https://api.github.com/repos/tailscale/github-action/git/refs/tags/v4.2.0"
       ]
     }
+  },
+  "ci_base_image_digests": {
+    "node": "node@sha256:43ac6c60b8f89723f746e8a92ce91abd5017e627ce1ddfe4238355d3a30b772c",
+    "python": "python@sha256:54c85f3c47607a77f32adec749d3c81d1348bf25833671f512b26a9b6d778cb3"
+  },
+  "deploy_tool_lock": {
+    "name": "wrangler",
+    "version": "4.142.0",
+    "license": "MIT OR Apache-2.0",
+    "integrity": "sha512-oqquqqtHOevn17hzI7qRzU+MiOaCU2UZRLPIZStjGlhwYbxe3hk4Stq3knfcIlGfMSfgM4iycZKeb1fEF5mRTQ==",
+    "dependency_lock": "ci/deploy-tool/package-lock.json",
+    "dependency_lock_sha256": "a0f6c272284f60c48eac81db876052f3562c2b000cf0e197ff34c5782d349439"
   }
 }

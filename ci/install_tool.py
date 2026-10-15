@@ -1,15 +1,16 @@
-"""Install only verified local CI artifacts; missing image/dependency pins refuse."""
+"""Stage hash-checked Python/binary tools, then install from local artifacts only."""
 
 import hashlib
 import json
 import os
-import re
 import runpy
 import shutil
 import stat
 import subprocess
 import sys
 import tarfile
+import urllib.request
+from datetime import UTC, datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -27,23 +28,26 @@ def regular(path):
 
 
 def digest_file(path, algorithm):
-    digest = hashlib.new(algorithm)
     with regular(path).open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest
+        return hashlib.file_digest(handle, algorithm)
 
 
 def command(arguments, *, root, input=None):
-    # No shell, network, environment credentials or project install hooks.
-    return subprocess.run(  # noqa: S603 -- fixed argument arrays after pin validation
+    # The acquisition phase is explicit. Neither phase inherits CI credentials.
+    return subprocess.run(  # noqa: S603 -- finite checked argument arrays, no shell
         arguments,
         cwd=root,
         input=input,
         check=True,
-        timeout=90,
+        timeout=300,
         capture_output=True,
-        env={"PATH": os.environ.get("PATH", os.defpath), "LANG": "C.UTF-8"},
+        env={
+            "PATH": os.environ.get("PATH", os.defpath),
+            "LANG": "C.UTF-8",
+            "HOME": str(root / ".tools/home"),
+            "SEMGREP_SEND_METRICS": "off",
+            "SEMGREP_ENABLE_VERSION_CHECK": "0",
+        },
     )
 
 
@@ -58,146 +62,86 @@ def sha256sum(path, expected, root):
     )
 
 
-def dependency_lock(tool, name, root):
-    expected = (
-        "ci/semgrep-dependencies.txt"
-        if name == "semgrep"
-        else "ci/tool-locks/" + name + "/package-lock.json"
-    )
-    if tool["dependency_lock"] is None or tool["dependency_lock_sha256"] is None:
-        raise ValueError("unresolved_tool_pin: " + name + ".dependency_lock")
-    if tool["dependency_lock"] != expected:
-        raise ValueError("dependency lock path refused")
-    path = root / expected
-    sha256sum(path, tool["dependency_lock_sha256"], root)
-    return path
+def checked(name, pins):
+    if name not in TOOLS:
+        raise ValueError("unknown CI tool")
+    return PIN_CHECK["validate"](pins=pins)
+
+
+def download(name, *, root=ROOT, pins=None):
+    pins = checked(name, pins)
+    if name not in {"gitleaks", "osv-scanner", "semgrep"}:
+        raise ValueError("npm acquisition requires the pinned Node runner")
+    directory = root / ".tools/downloads"
+    if directory.exists() or any(p.is_symlink() for p in (directory, *directory.parents)):
+        raise ValueError("preserve existing tool downloads")
+    directory.mkdir(parents=True)
+    tool = pins["tools"][name]
+    if name == "semgrep":
+        lock = PIN_CHECK["pip_lock"](root, tool)
+        if not lock:
+            raise ValueError("missing dependency lock")
+        command(
+            [
+                sys.executable,
+                "-I",
+                "-m",
+                "pip",
+                "download",
+                "--require-hashes",
+                "--no-deps",
+                "--only-binary=:all:",
+                "--no-cache-dir",
+                "--disable-pip-version-check",
+                "--index-url",
+                "https://pypi.org/simple",
+                "--dest",
+                str(directory),
+                "-r",
+                str(root / tool["dependency_lock"]),
+            ],
+            root=root,
+        )
+    else:
+        # Release URLs are fixed by the reviewed version/artifact metadata.
+        expected = (
+            "https://github.com/"
+            + ("gitleaks/gitleaks" if name == "gitleaks" else "google/osv-scanner")
+            + "/releases/download/v"
+            + tool["version_to_verify"]
+            + "/"
+            + tool["artifact"]
+        )
+        if tool["url"] != expected:
+            raise ValueError("download URL refused")
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        with (
+            opener.open(expected, timeout=60) as response,
+            (directory / tool["artifact"]).open("xb") as out,
+        ):
+            shutil.copyfileobj(response, out)
+    sha256sum(directory / tool["artifact"], tool["sha256"], root)
 
 
 def install(name, *, root=ROOT, pins=None):
-    if name not in TOOLS:
-        raise ValueError("unknown CI tool")
-    pins = PIN_CHECK["validate"](pins=pins)
-    image = pins["tools"]["ci-image"]["digest"]
-    if image is None:
-        raise ValueError("unresolved_tool_pin: ci-image.digest")
-    if not isinstance(image, str) or not image.startswith("sha256:"):
-        raise ValueError("CI image digest refused")
-    PIN_CHECK["hex_pin"](image[7:], 64)
-    tool = pins["tools"][name]
-    # Scoped npm name is registry metadata, never part of a filesystem path.
-    filename = tool["artifact"].removeprefix("@playwright/")
-    if re.fullmatch(r"[A-Za-z0-9_.+-]+", filename) is None:
-        raise ValueError("artifact path refused")
-    artifact = root / ".tools/downloads" / filename
-    if tool["artifact_format"] == "npm-tarball":
-        if digest_file(artifact, "sha512").digest() != PIN_CHECK["integrity_bytes"](
-            tool["integrity"]
-        ):
-            raise ValueError("npm integrity mismatch")
-        lock_path = dependency_lock(tool, name, root)
-        lock = json.loads(lock_path.read_bytes())
-        packages = lock["packages"]
-        dependencies = {tool["npm_package"]: tool["version_to_verify"]}
-        if (
-            lock["lockfileVersion"] != 3
-            or packages[""]["dependencies"] != dependencies
-            or lock["name"] != "foundry-ci-" + name
-            or lock["version"] != "1.0.0"
-            or packages["node_modules/" + tool["npm_package"]]["version"]
-            != tool["version_to_verify"]
-            or packages["node_modules/" + tool["npm_package"]]["integrity"] != tool["integrity"]
-        ):
-            raise ValueError("npm exact version/integrity lock refused")
-        for path, package in packages.items():
-            if not path:
-                continue
-            PIN_CHECK["integrity_bytes"](package["integrity"])
-            if (
-                re.fullmatch(r"node_modules/(?:[@A-Za-z0-9_.+-]+/)*[A-Za-z0-9_.+-]+", path) is None
-                or ".." in path
-                or package.get("link")
-                or not re.fullmatch(
-                    r"[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?", package["version"]
-                )
-                or not package["resolved"].startswith("https://registry.npmjs.org/")
-            ):
-                raise ValueError("npm dependency closure refused")
-        node = command(["node", "--version"], root=root)
-        if node.stdout.strip().decode() != "v" + pins["tools"]["node"]["version"]:
-            raise ValueError("Node version mismatch")
-        target = root / ".tools/npm" / name
-        if any(p.is_symlink() for p in (target, *target.parents)) or target.exists():
-            raise ValueError("preserve existing npm tool directory")
-        cache_path = root / ".tools/npm-cache"
-        if any(p.is_symlink() for p in (cache_path, *cache_path.parents)) or (
-            cache_path.exists() and not cache_path.is_dir()
-        ):
-            raise ValueError("npm cache links or type refused")
-        target.mkdir(parents=True)
-        (target / "package-lock.json").write_bytes(lock_path.read_bytes())
-        (target / "package.json").write_text(
-            json.dumps(
-                {
-                    "name": lock["name"],
-                    "version": "1.0.0",
-                    "private": True,
-                    "dependencies": dependencies,
-                }
-            )
+    pins = checked(name, pins)
+    if name in {"playwright", "playwright-core", "lighthouse"}:
+        PIN_CHECK["npm_lock"](
+            root,
+            pins["tools"][name],
+            "checks",
+            [pins["tools"][n] for n in ("playwright", "playwright-core", "lighthouse")],
         )
-        cache = str(cache_path)
-        command(
-            [
-                "npm",
-                "cache",
-                "add",
-                "--offline",
-                "--ignore-scripts",
-                "--cache",
-                cache,
-                str(artifact),
-            ],
-            root=root,
-        )
-        command(
-            [
-                "npm",
-                "ci",
-                "--offline",
-                "--ignore-scripts",
-                "--no-audit",
-                "--no-fund",
-                "--cache",
-                cache,
-                "--prefix",
-                str(target),
-            ],
-            root=root,
-        )
-        installed = json.loads(
-            (target / "node_modules" / tool["npm_package"] / "package.json").read_bytes()
-        )
-        if installed["version"] != tool["version_to_verify"]:
-            raise ValueError("installed npm version mismatch")
+        command(["node", "ci/npm_tool.mjs", "install"], root=root)
         return
+    tool = pins["tools"][name]
+    artifact = root / ".tools/downloads" / tool["artifact"]
     sha256sum(artifact, tool["sha256"], root)
     target = root / ".tools" / name
     if any(p.is_symlink() for p in (target, *target.parents)) or target.exists():
         raise ValueError("preserve existing tool directory")
     if name == "semgrep":
-        lock = dependency_lock(tool, name, root)
-        lines = lock.read_text().replace("\\\n", " ").splitlines()
-        for line in lines:
-            if (
-                line.strip()
-                and not line.startswith("#")
-                and re.fullmatch(
-                    r"[A-Za-z0-9_.-]+==[0-9][A-Za-z0-9_.+-]*(?:\s+--hash=sha256:[0-9a-f]{64})+\s*",
-                    line,
-                )
-                is None
-            ):
-                raise ValueError("unhashed or remote pip requirement refused")
+        PIN_CHECK["pip_lock"](root, tool)
         command([sys.executable, "-I", "-m", "venv", str(target)], root=root)
         command(
             [
@@ -207,6 +151,7 @@ def install(name, *, root=ROOT, pins=None):
                 "pip",
                 "install",
                 "--require-hashes",
+                "--no-deps",
                 "--no-index",
                 "--find-links",
                 str(root / ".tools/downloads"),
@@ -214,12 +159,11 @@ def install(name, *, root=ROOT, pins=None):
                 "--no-cache-dir",
                 "--disable-pip-version-check",
                 "-r",
-                str(root / "ci/semgrep-constraints.txt"),
-                "-r",
-                str(lock),
+                str(root / tool["dependency_lock"]),
             ],
             root=root,
         )
+        command([str(target / "bin/python"), "-I", "-m", "pip", "check"], root=root)
         return
     output = target / "bin" / name
     output.parent.mkdir(parents=True)
@@ -231,23 +175,88 @@ def install(name, *, root=ROOT, pins=None):
             with archive.extractfile(member) as source, output.open("xb") as destination:
                 shutil.copyfileobj(source, destination)
     else:
-        if tool["database_snapshot"] is None or tool["database_sha256"] is None:
-            raise ValueError("unresolved_tool_pin: osv-scanner.database_snapshot/database_sha256")
-        snapshot = tool["database_snapshot"]
-        if not isinstance(snapshot, str) or re.fullmatch(r"[A-Za-z0-9_.+-]+", snapshot) is None:
-            raise ValueError("OSV database artifact path refused")
-        sha256sum(root / ".tools/downloads" / snapshot, tool["database_sha256"], root)
+        if tool["database"] != "live" or not tool["owner_decision"]:
+            raise ValueError("OSV live database owner decision required")
         with artifact.open("rb") as source, output.open("xb") as destination:
             shutil.copyfileobj(source, destination)
     output.chmod(0o700)
 
 
+def scan_osv(*, root=ROOT):
+    pins = PIN_CHECK["validate"]()
+    executable = str(root / ".tools/osv-scanner/bin/osv-scanner")
+    version = command([executable, "--version"], root=root).stdout.decode().strip()
+    if pins["tools"]["osv-scanner"]["version_to_verify"] not in version:
+        raise ValueError("OSV version mismatch")
+    sys.stdout.write(
+        version + "\nOSV database=live scan_started=" + datetime.now(UTC).isoformat() + "\n"
+    )
+    sys.stdout.flush()
+    # Include CI dependency closures: the shipped application itself has none.
+    directory = root / ".tools/osv-input"
+    directory.mkdir()
+    shutil.copyfile(root / "ci/semgrep-requirements.txt", directory / "requirements.txt")
+    arguments = [executable, "scan", "source", "--format", "json", "--output", "osv-report.json"]
+    for path in (
+        "package-lock.json",
+        "ci/check-tools/package-lock.json",
+        "ci/deploy-tool/package-lock.json",
+        ".tools/osv-input/requirements.txt",
+    ):
+        arguments.extend(["--lockfile", path])
+    try:
+        command(arguments, root=root)
+    finally:
+        sys.stdout.write("OSV live scan_finished=" + datetime.now(UTC).isoformat() + "\n")
+        report = root / "osv-report.json"
+        if report.is_file():
+            value = json.loads(report.read_bytes())
+            modified = []
+
+            def collect(item):
+                if isinstance(item, dict):
+                    if isinstance(item.get("modified"), str):
+                        modified.append(item["modified"])
+                    for child in item.values():
+                        collect(child)
+                elif isinstance(item, list):
+                    for child in item:
+                        collect(child)
+
+            collect(value)
+            sys.stdout.write(
+                "OSV returned_record_modified="
+                + (
+                    max(modified)
+                    if modified
+                    else "none; live API supplies no global snapshot timestamp"
+                )
+                + "\n"
+            )
+
+
 if __name__ == "__main__":
     try:
-        if len(sys.argv) != 2:
+        if len(sys.argv) == 3 and sys.argv[1] == "--download":
+            download(sys.argv[2])
+        elif sys.argv[1:] == ["--scan-osv"]:
+            scan_osv()
+        elif len(sys.argv) == 2:
+            install(sys.argv[1])
+        else:
             raise ValueError("CI installer arguments refused")
-        install(sys.argv[1])
-    except (ValueError, KeyError, TypeError, OSError, subprocess.SubprocessError, tarfile.TarError):
-        sys.stderr.write("BLOCKED CI tool pin, artifact integrity or dependency closure\n")
+    except (
+        ValueError,
+        KeyError,
+        TypeError,
+        OSError,
+        subprocess.SubprocessError,
+        tarfile.TarError,
+    ) as error:
+        sys.stderr.write(
+            "BLOCKED CI tool pin, artifact integrity, dependency closure or tool execution: "
+            + type(error).__name__
+            + "\n"
+        )
         raise SystemExit(2) from None
-    sys.stdout.write("PASS pinned CI tool installation\n")
+    sys.stdout.write("PASS pinned CI tool operation\n")

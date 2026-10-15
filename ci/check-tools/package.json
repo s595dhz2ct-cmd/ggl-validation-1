@@ -1,0 +1,1 @@
+{"name":"foundry-landing-check-tools","version":"1.0.0","private":true,"dependencies":{"@playwright/test":"1.63.0","playwright-core":"1.63.0","lighthouse":"13.5.0"}}

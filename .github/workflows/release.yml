@@ -72,13 +72,54 @@ jobs:
       - name: Prepared private transport (runtime hash and private identity remain null)
         if: ${{ false }}
         uses: tailscale/github-action@d1b6cd204f8dceda5b3eaad7f1f767be390056cd # v4.2.0
-      # HUMAN H2/H3 replaces this barrier only after exact image/Action/tool hashes,
-      # issuer keys, target IDs and private ACL are independently reviewed.
-      # Prepared Actions above remain inactive; a reviewed fixed deploy image
-      # (no source checkout or project scripts) must rehash the exact
-      # attested artifact and protected-main evidence, verify the fixed destination,
-      # obtain OIDC with audience foundry-build-deploy, POST /build/ci/authorize,
-      # immediately POST /build/ci/dispatch, and upload only after consumption.
-      # Credentials are production Environment secrets, resolved inside that image.
-      # Completion returns only IDs/hashes through /build/ci/dispatch; ambiguity
-      # stops for HUMAN reconciliation. There is no automatic retry/preview route.
+      - name: Prepared verified public artifact download (deploy image remains null)
+        if: ${{ false }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: reviewed-public-artifact
+          path: /release/public/
+      - name: Prepared verifier attestation download (verifier image remains null)
+        if: ${{ false }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: reviewed-release-attestation
+          path: /release/
+      - name: Prepared credential-free CI authorize and dispatch
+        if: ${{ false }}
+        env:
+          FOUNDRY_DEPLOY_TOOL_VERSION: '4.142.0'
+          FOUNDRY_DEPLOY_TOOL_SHA256: 'null'
+          FOUNDRY_DEPLOY_TOOL_LOCK: /opt/foundry/deploy-tool/package-lock.json
+          FOUNDRY_DEPLOY_TOOL_LOCK_SHA256: a0f6c272284f60c48eac81db876052f3562c2b000cf0e197ff34c5782d349439
+          FOUNDRY_DEPLOY_TOOL_INTEGRITY: sha512-oqquqqtHOevn17hzI7qRzU+MiOaCU2UZRLPIZStjGlhwYbxe3hk4Stq3knfcIlGfMSfgM4iycZKeb1fEF5mRTQ==
+          FOUNDRY_EXACT_SHA: ${{ inputs.exact_sha }}
+        run: |
+          # Future pinned source-free image and bounded OIDC bootstrap only.
+          # No hosting token in this process. Freeze the verified artifact and
+          # write a private typed handoff after single-use permit consumption.
+          python -m foundry.build.hosting authorize
+      - name: Prepared fixed uploader with private dispatch handoff
+        if: ${{ false }}
+        env:
+          FOUNDRY_DEPLOY_TOOL_VERSION: '4.142.0'
+          FOUNDRY_DEPLOY_TOOL_SHA256: 'null'
+          FOUNDRY_DEPLOY_TOOL_LOCK: /opt/foundry/deploy-tool/package-lock.json
+          FOUNDRY_DEPLOY_TOOL_LOCK_SHA256: a0f6c272284f60c48eac81db876052f3562c2b000cf0e197ff34c5782d349439
+          FOUNDRY_DEPLOY_TOOL_INTEGRITY: sha512-oqquqqtHOevn17hzI7qRzU+MiOaCU2UZRLPIZStjGlhwYbxe3hk4Stq3knfcIlGfMSfgM4iycZKeb1fEF5mRTQ==
+          FOUNDRY_EXACT_SHA: ${{ inputs.exact_sha }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          # Separate process supplied by the future pinned deploy image.
+          # Image assembly must use ci/deploy-tool/package-lock.json with
+          # hash verification and npm ci --offline --ignore-scripts.
+          # The lock hash is separate from the unresolved executable hash.
+          # Claim the private handoff once, repeat expiry/artifact/destination/
+          # protected-commit/tool checks, then invoke only the fixed uploader.
+          # No source checkout, project scripts, OIDC or private CI calls here.
+          python -m foundry.build.hosting upload
+      # HUMAN H2/H3 replaces the first barrier only after exact image/Action/tool
+      # hashes, issuer keys, target IDs and private ACL are independently reviewed.
+      # Every prepared step remains inactive. Immutable image/runtime pins,
+      # reviewed mounts and private identity delivery are still unresolved.
+      # The Environment token is scoped only to the final fixed uploader process.
+      # An ambiguous result stops for HUMAN reconciliation without retry.
