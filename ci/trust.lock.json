@@ -18,7 +18,7 @@
     "ci/npm_tool.mjs": "12e1cd02d68d3931182b7cdc7cda9705ff8ab0ad2916f98c2137ad101cc6cbaa",
     "ci/pin_check.py": "57d16dfe1897cf36d054a626b23b6b18d96a95a3561f9cac460d5e103f655a24",
     "ci/pins.json": "03d974f361d2cc27e91486aab704caced16bfcdda030248914e156ad45fd806f",
-    "ci/playwright_e2e.mjs": "45cce1114e1a1b703a737105701926cc818223497bc896152552f11e349a1045",
+    "ci/playwright_e2e.mjs": "8f21aaca4c4c0be0826a80f67a76724bc816f21894e6267f7695d2beb7b3839c",
     "ci/playwright_e2e.py": "91e0ac54e48f5b7bb18f1ff6b436644f9ac8b48f838cbe7a1c7772c556ffa3b2",
     "ci/release-pins.json": "79fe62e057f7b25035d2c6b1acfdc6e1a7ffa7759bf32d05cd9492fb969d7c9c",
     "ci/semgrep-constraints.txt": "81981e5b675b5fccb302a7d1a92c9f0aba3291de5efa9d486f634635b0d5c806",

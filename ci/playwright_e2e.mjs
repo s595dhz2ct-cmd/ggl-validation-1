@@ -74,6 +74,9 @@ try {
           path.join(root, '.tools/npm/check-tools/node_modules/lighthouse/cli/index.js'),
           'http://127.0.0.1:8765/', '--output=json', `--output-path=${report}`,
           `--port=${port}`, '--hostname=127.0.0.1', '--quiet',
+          // The page's CSP (connect-src 'none') deliberately blocks Lighthouse's in-page
+          // robots.txt fetch; keep the CSP and skip only that audit.
+          '--skip-audits=robots-txt',
         ];
         if (preset === 'desktop') args.push('--preset=desktop');
         const child = spawn(process.execPath, args, {
