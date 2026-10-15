@@ -3,7 +3,7 @@
     "public/index.html"
   ],
   "files": {
-    ".github/workflows/ci.yml": "a2d7f70e9c59228a9159a5d59cc2048c9797c99359afbdfd8c959ae48456b581",
+    ".github/workflows/ci.yml": "5690f8064eb2de189328dcbb70b0a7a54842aaa3a74e0a8b367d7a2bd83f7e89",
     ".github/workflows/release.yml": "3d79bf38ee31d1bf0da8c4f6577016d0806f23fd6979f83da5becbc379d98e0d",
     "README.md": "d6985a7ecaeca4cc73a76be90e19f76ce8cc983182e0672f627d2bdbbd97ccbb",
     "ci/artifact.lock.json": "07cc11fb200994512d7dbe6302416ad68eacee3d6fa780222f97eb5a95878a64",
@@ -16,7 +16,7 @@
     "ci/licenses.lock.json": "716f494b7522b31b192c0a22fd435602b391d17b06fe15a1fc804ee2fc3b5cb6",
     "ci/lighthouse_check.py": "7fe559d55f8b7bf70b01f3a0e4090c1563d1509f4adef4e35ea883ee14d37cc3",
     "ci/npm_tool.mjs": "0e2af29b796efb79a5ccbb11411a3dd6bd5c90c6adb31a382e0de3dffa39290a",
-    "ci/pin_check.py": "a5adf826fd5567c263d24b364f08c146cf08dd31e3e800ba641981391bfbb81e",
+    "ci/pin_check.py": "4f8f37c5e8e07d112e60904aa9d4fd1ee746c7985f84d1634b5234fa79b45cf5",
     "ci/pins.json": "9e3c35559c701e287f8a16cfecd0fde8119a1c5df361d29cb1087454b05ff28d",
     "ci/playwright_e2e.mjs": "67458c95ef481eab9238d25078fb153cbe3e0c28a569f2018b74385187c01f03",
     "ci/playwright_e2e.py": "91e0ac54e48f5b7bb18f1ff6b436644f9ac8b48f838cbe7a1c7772c556ffa3b2",

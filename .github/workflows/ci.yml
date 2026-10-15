@@ -24,7 +24,7 @@ jobs:
     timeout-minutes: 10
     container:
       image: python@sha256:54c85f3c47607a77f32adec749d3c81d1348bf25833671f512b26a9b6d778cb3
-      options: --user 1000:1000 --cap-drop=ALL --security-opt=no-new-privileges
+      options: --user 1001:1001 --cap-drop=ALL --security-opt=no-new-privileges
     steps:
       - name: Exact secret-free checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -41,7 +41,7 @@ jobs:
     timeout-minutes: 10
     container:
       image: node@sha256:43ac6c60b8f89723f746e8a92ce91abd5017e627ce1ddfe4238355d3a30b772c
-      options: --user 1000:1000 --cap-drop=ALL --security-opt=no-new-privileges
+      options: --user 1001:1001 --cap-drop=ALL --security-opt=no-new-privileges
     steps:
       - name: Exact secret-free checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -62,7 +62,7 @@ jobs:
     timeout-minutes: 10
     container:
       image: node@sha256:43ac6c60b8f89723f746e8a92ce91abd5017e627ce1ddfe4238355d3a30b772c
-      options: --user 1000:1000 --cap-drop=ALL --security-opt=no-new-privileges
+      options: --user 1001:1001 --cap-drop=ALL --security-opt=no-new-privileges
     steps:
       - name: Exact secret-free checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -83,7 +83,7 @@ jobs:
     timeout-minutes: 10
     container:
       image: python@sha256:54c85f3c47607a77f32adec749d3c81d1348bf25833671f512b26a9b6d778cb3
-      options: --user 1000:1000 --cap-drop=ALL --security-opt=no-new-privileges
+      options: --user 1001:1001 --cap-drop=ALL --security-opt=no-new-privileges
     steps:
       - name: Exact secret-free checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -104,7 +104,7 @@ jobs:
     timeout-minutes: 10
     container:
       image: python@sha256:54c85f3c47607a77f32adec749d3c81d1348bf25833671f512b26a9b6d778cb3
-      options: --user 1000:1000 --cap-drop=ALL --security-opt=no-new-privileges
+      options: --user 1001:1001 --cap-drop=ALL --security-opt=no-new-privileges
     steps:
       - name: Exact secret-free checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -125,7 +125,7 @@ jobs:
     timeout-minutes: 10
     container:
       image: python@sha256:54c85f3c47607a77f32adec749d3c81d1348bf25833671f512b26a9b6d778cb3
-      options: --user 1000:1000 --cap-drop=ALL --security-opt=no-new-privileges
+      options: --user 1001:1001 --cap-drop=ALL --security-opt=no-new-privileges
     steps:
       - name: Exact secret-free checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -146,7 +146,7 @@ jobs:
     timeout-minutes: 10
     container:
       image: python@sha256:54c85f3c47607a77f32adec749d3c81d1348bf25833671f512b26a9b6d778cb3
-      options: --user 1000:1000 --cap-drop=ALL --security-opt=no-new-privileges
+      options: --user 1001:1001 --cap-drop=ALL --security-opt=no-new-privileges
     steps:
       - name: Exact secret-free checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -163,7 +163,7 @@ jobs:
     timeout-minutes: 10
     container:
       image: python@sha256:54c85f3c47607a77f32adec749d3c81d1348bf25833671f512b26a9b6d778cb3
-      options: --user 1000:1000 --cap-drop=ALL --security-opt=no-new-privileges
+      options: --user 1001:1001 --cap-drop=ALL --security-opt=no-new-privileges
     steps:
       - name: Exact secret-free checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

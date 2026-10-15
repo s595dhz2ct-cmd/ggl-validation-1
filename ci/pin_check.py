@@ -79,7 +79,7 @@ jobs:
     timeout-minutes: 10
     container:
       image: {BASES["node" if browser else "python"]}
-      options: --user 1000:1000 --cap-drop=ALL --security-opt=no-new-privileges
+      options: --user 1001:1001 --cap-drop=ALL --security-opt=no-new-privileges
     steps:
       - name: Exact secret-free checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
