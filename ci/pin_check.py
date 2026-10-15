@@ -18,12 +18,7 @@ VERSIONS = {
     "playwright-core": "1.63.0",
     "lighthouse": "13.5.0",
 }
-ACTION_TAGS = {
-    "actions/checkout": "v7.0.1",
-    "actions/upload-artifact": "v7.0.1",
-    "actions/download-artifact": "v8.0.1",
-    "tailscale/github-action": "v4.2.0",
-}
+ACTION_TAGS = {"actions/checkout": "v7.0.1"}
 ALLOW = ["MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "CC0-1.0"]
 BASES = {
     "node": "node@sha256:43ac6c60b8f89723f746e8a92ce91abd5017e627ce1ddfe4238355d3a30b772c",
@@ -400,16 +395,10 @@ def validate(pins=None, release=None, workflows=None, constraints=None, root=ROO
     if (
         release["checkout_action_sha"] != actions["actions/checkout"]["commit"]
         or pins["tools"]["actions-checkout"]["commit"] != release["checkout_action_sha"]
-        or release["artifact_actions_sha"]
-        != {
-            "upload": actions["actions/upload-artifact"]["commit"],
-            "download": actions["actions/download-artifact"]["commit"],
-        }
-        or release["tailscale_action_sha"] != actions["tailscale/github-action"]["commit"]
     ):
         raise ValueError("Action hash binding refused")
     workflows = (
-        [(ROOT / ".github/workflows" / name).read_text() for name in ("ci.yml", "release.yml")]
+        [(ROOT / ".github/workflows" / name).read_text() for name in ("ci.yml",)]
         if workflows is None
         else workflows
     )

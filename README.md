@@ -27,7 +27,11 @@ vulnerability coverage fail CI. The 2026-10-15 evidence records fixed tool closu
 and Semgrep 1.179.0's 13-day security-fix exception, approved by Claude because
 pyjwt <2.14 has published advisories. The owner's `keep_ci_only` license decision
 still applies; Semgrep is excluded from public assets. Native browser/scanner
-acceptance and a green live rerun remain open. Release images, target manifest and workflow commit
-remain null and production deployment stays blocked.
+acceptance remains separate from offline checks. GitHub runs only the eight checks
+and the owner's PR review/merge. After merge, Foundry verifies the exact complete
+tree locally, requests a separate phone deployment approval, uploads only verified
+`public/` bytes using pinned Wrangler in an M4 sandbox, then independently checks
+the served hashes. The deploy token is held only in the owner's local age store.
+No GitHub production job, Environment credential, OIDC or CI tailnet access is used.
 
 Operational and HUMAN steps: `docs/runbooks/m72-landing-builder.md` in Foundry.
