@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "dependencies": [],
+  "assets": [
+    {
+      "path": "index.html",
+      "license": "LicenseRef-Foundry-Original",
+      "sha256": "b51bd0e451039f88bd682ea534838c28baaf2a3f254de93a4da7a240abe1722c"
+    },
+    {
+      "path": "mark.svg",
+      "license": "LicenseRef-Foundry-Original",
+      "sha256": "d768bfff3a92be62853435414f5b8f0d855ca3f5982083510f86bc393e1c397e"
+    },
+    {
+      "path": "privacy.html",
+      "license": "LicenseRef-Foundry-Original",
+      "sha256": "65f7a998221d77b2bf850479d82e741f17c121a56f8f3a7b2f90e0ea4ccc0f21"
+    },
+    {
+      "path": "rights.html",
+      "license": "LicenseRef-Foundry-Original",
+      "sha256": "f5eed943d32c8f15ca7dfbdd1ef77fb00bdca8006c809e8ff6a89089b5664640"
+    },
+    {
+      "path": "styles.css",
+      "license": "LicenseRef-Foundry-Original",
+      "sha256": "94cfa65746a65677dd1a002b20357a6990711c38530d2100b826b35a469ae474"
+    },
+    {
+      "path": "waitlist.js",
+      "license": "LicenseRef-Foundry-Original",
+      "sha256": "eb30724712e6de76f64c2b971da98cb7951081d08302de9763ec771647174cbf"
+    }
+  ]
+}

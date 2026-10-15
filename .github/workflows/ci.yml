@@ -1,0 +1,187 @@
+name: landing-template-ci
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: landing-ci-${{ github.ref }}
+  cancel-in-progress: true
+# HUMAN: select the reviewed digest-pinned CI image before enabling any prepared
+# step. Tool artifacts are staged in .tools/downloads by that reviewed image;
+# installers verify them and run offline with no package lifecycle scripts.
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: tests skipped-with-reason
+        run: echo 'SKIPPED unresolved_tool_pin - ci-image.digest is null'
+      - name: Prepared checkout (CI image pin required)
+        if: ${{ false }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Validate recorded pins
+        if: ${{ false }}
+        run: python -I ci/pin_check.py
+      - name: tests prepared install and check (remaining pins required)
+        if: ${{ false }}
+        run: |
+          set -euo pipefail
+          python -I -m unittest discover -s ci -p test_static.py
+      - name: Refuse incomplete coverage
+        run: exit 1
+  playwright:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: playwright skipped-with-reason
+        run: echo 'SKIPPED unresolved_tool_pin - ci-image.digest is null; chromium.sha256 and npm dependency locks are null'
+      - name: Prepared checkout (CI image pin required)
+        if: ${{ false }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Validate recorded pins
+        if: ${{ false }}
+        run: python -I ci/pin_check.py
+      - name: playwright prepared install and check (remaining pins required)
+        if: ${{ false }}
+        run: |
+          set -euo pipefail
+          python -I ci/install_tool.py playwright
+          python -I ci/install_tool.py playwright-core
+          FOUNDRY_LIVE=1 python -I ci/playwright_e2e.py
+      - name: Refuse incomplete coverage
+        run: exit 1
+  lighthouse:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: lighthouse skipped-with-reason
+        run: echo 'SKIPPED unresolved_tool_pin - ci-image.digest is null; chromium.sha256 and lighthouse.dependency_lock are null'
+      - name: Prepared checkout (CI image pin required)
+        if: ${{ false }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Validate recorded pins
+        if: ${{ false }}
+        run: python -I ci/pin_check.py
+      - name: lighthouse prepared install and check (remaining pins required)
+        if: ${{ false }}
+        run: |
+          set -euo pipefail
+          python -I ci/install_tool.py lighthouse
+          FOUNDRY_LIVE=1 python -I ci/playwright_e2e.py --lighthouse
+      - name: Refuse incomplete coverage
+        run: exit 1
+  gitleaks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: gitleaks skipped-with-reason
+        run: echo 'SKIPPED unresolved_tool_pin - ci-image.digest is null'
+      - name: Prepared checkout (CI image pin required)
+        if: ${{ false }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Validate recorded pins
+        if: ${{ false }}
+        run: python -I ci/pin_check.py
+      - name: gitleaks prepared install and check (remaining pins required)
+        if: ${{ false }}
+        run: |
+          set -euo pipefail
+          python -I ci/install_tool.py gitleaks
+          .tools/gitleaks/bin/gitleaks dir . --redact --no-banner
+      - name: Refuse incomplete coverage
+        run: exit 1
+  semgrep:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: semgrep skipped-with-reason
+        run: echo 'SKIPPED unresolved_tool_pin - ci-image.digest is null; semgrep.dependency_lock is null; owner CI-only license decision required'
+      - name: Prepared checkout (CI image pin required)
+        if: ${{ false }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Validate recorded pins
+        if: ${{ false }}
+        run: python -I ci/pin_check.py
+      - name: semgrep prepared install and check (remaining pins required)
+        if: ${{ false }}
+        run: |
+          set -euo pipefail
+          python -I ci/install_tool.py semgrep
+          .tools/semgrep/bin/semgrep scan --config ci/semgrep.yml --disable-version-check --error .
+      - name: Refuse incomplete coverage
+        run: exit 1
+  osv-scanner:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: osv-scanner skipped-with-reason
+        run: echo 'SKIPPED unresolved_tool_pin - ci-image.digest is null; database_snapshot/database_sha256 are null'
+      - name: Prepared checkout (CI image pin required)
+        if: ${{ false }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Validate recorded pins
+        if: ${{ false }}
+        run: python -I ci/pin_check.py
+      - name: osv-scanner prepared install and check (remaining pins required)
+        if: ${{ false }}
+        run: |
+          set -euo pipefail
+          python -I ci/install_tool.py osv-scanner
+          .tools/osv-scanner/bin/osv-scanner scan source --offline --lockfile package-lock.json
+      - name: Refuse incomplete coverage
+        run: exit 1
+  license-check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: license-check skipped-with-reason
+        run: echo 'SKIPPED unresolved_tool_pin - ci-image.digest is null'
+      - name: Prepared checkout (CI image pin required)
+        if: ${{ false }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Validate recorded pins
+        if: ${{ false }}
+        run: python -I ci/pin_check.py
+      - name: license-check prepared install and check (remaining pins required)
+        if: ${{ false }}
+        run: |
+          set -euo pipefail
+          python -I ci/check.py license-check
+      - name: Refuse incomplete coverage
+        run: exit 1
+  artifact-integrity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: artifact-integrity skipped-with-reason
+        run: echo 'SKIPPED unresolved_tool_pin - ci-image.digest is null'
+      - name: Prepared checkout (CI image pin required)
+        if: ${{ false }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Validate recorded pins
+        if: ${{ false }}
+        run: python -I ci/pin_check.py
+      - name: artifact-integrity prepared install and check (remaining pins required)
+        if: ${{ false }}
+        run: |
+          set -euo pipefail
+          python -I ci/check.py artifact-integrity
+      - name: Refuse incomplete coverage
+        run: exit 1

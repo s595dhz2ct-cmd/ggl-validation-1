@@ -1,0 +1,5 @@
+# CI-only LGPL-2.1-or-later; owner license decision required.
+# Top-level wheels only: absent transitive hashes make pip fail closed.
+semgrep==1.178.0 \
+    --hash=sha256:b7c4a4ba5cad1a6b0e76f7143c164b3f2853b9d0f902f2db2f64006257c941f2 \
+    --hash=sha256:33eb20066093799ab5fb9c4d3722e891d2bfb89218a145762a1f4397642b9ad2
