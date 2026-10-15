@@ -1,4 +1,9 @@
-"""Stage hash-checked Python/binary tools, then install from local artifacts only."""
+"""Stage hash-checked tools, then install offline using pin_check's full lock checks.
+
+The shared validator binds the 66-package Semgrep 1.179.0/pyjwt 2.15.1 closure
+and the 91-package deploy closure with undici 7.29.1/sharp 0.35.5 overrides.
+Lock hashes live in pins.json/release-pins.json and are rechecked before commands.
+"""
 
 import hashlib
 import json

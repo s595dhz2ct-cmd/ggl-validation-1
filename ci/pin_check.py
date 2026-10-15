@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parent.parent
 VERSIONS = {
     "gitleaks": "8.30.1",
     "osv-scanner": "2.6.0",
-    "semgrep": "1.178.0",
+    "semgrep": "1.179.0",
     "playwright": "1.63.0",
     "playwright-core": "1.63.0",
     "lighthouse": "13.5.0",
@@ -32,6 +32,17 @@ BASES = {
 LOCKS = {
     "checks": ("ci/check-tools/package-lock.json", 116),
     "deploy": ("ci/deploy-tool/package-lock.json", 91),
+}
+DEPLOY_OVERRIDES = {"undici": "7.29.1", "sharp": "0.35.5"}
+SEMGREP_AGE_EXCEPTION = {
+    "kind": "security-fix",
+    "approved_by": "Claude",
+    "approved_on": "2026-10-15",
+    "release_age_days": 13,
+    "reason": (
+        "pyjwt <2.14 has published advisories; Semgrep 1.179.0 permits the fixed "
+        "pyjwt 2.15.1 closure."
+    ),
 }
 COMMANDS = {
     "tests": "python -I -m unittest discover -s ci -p test_static.py",
@@ -132,14 +143,21 @@ def npm_lock(root, record, group, tools):
     lock = json.loads(lock_bytes(root, relative, record["dependency_lock_sha256"]))
     package = json.loads((root / relative).with_name("package.json").read_bytes())
     dependencies = {t["npm_package"]: t["version_to_verify"] for t in tools}
+    expected_package = {
+        "name": lock["name"],
+        "version": "1.0.0",
+        "private": True,
+        "dependencies": dependencies,
+    }
+    if group == "deploy":
+        expected_package["overrides"] = DEPLOY_OVERRIDES
     if (
         lock["lockfileVersion"] != 3
         or lock["name"]
         != "foundry-landing-" + ("check-tools" if group == "checks" else "deploy-tool")
         or lock["version"] != "1.0.0"
         or lock["packages"][""]["dependencies"] != dependencies
-        or package
-        != {"name": lock["name"], "version": "1.0.0", "private": True, "dependencies": dependencies}
+        or package != expected_package
         or len(lock["packages"]) != count + 1
     ):
         raise ValueError("npm dependency closure refused")
@@ -155,6 +173,15 @@ def npm_lock(root, record, group, tools):
             or not item["resolved"].startswith("https://registry.npmjs.org/")
         ):
             raise ValueError("npm dependency closure refused")
+        if group == "deploy":
+            name = path.rsplit("node_modules/", 1)[-1]
+            if name in DEPLOY_OVERRIDES and item["version"] != DEPLOY_OVERRIDES[name]:
+                raise ValueError("npm security override refused")
+    if group == "deploy" and any(
+        lock["packages"].get("node_modules/" + name, {}).get("version") != version
+        for name, version in DEPLOY_OVERRIDES.items()
+    ):
+        raise ValueError("npm security override refused")
     for tool in tools:
         item = lock["packages"]["node_modules/" + tool["npm_package"]]
         if item["version"] != tool["version_to_verify"] or item["integrity"] != tool["integrity"]:
@@ -181,10 +208,15 @@ def pip_lock(root, tool):
         ):
             raise ValueError("unhashed or remote pip requirement refused")
         requirements.append(line)
-    if len(requirements) != 66 or not any(
-        line.startswith("semgrep==" + tool["version_to_verify"] + " ")
-        and "--hash=sha256:" + tool["sha256"] in line
-        for line in requirements
+    if (
+        len(requirements) != 66
+        or len({line.split("==", 1)[0] for line in requirements}) != 66
+        or not any(line.startswith("pyjwt==2.15.1 ") for line in requirements)
+        or not any(
+            line.startswith("semgrep==" + tool["version_to_verify"] + " ")
+            and "--hash=sha256:" + tool["sha256"] in line
+            for line in requirements
+        )
     ):
         raise ValueError("Semgrep complete dependency closure refused")
     return value
@@ -229,7 +261,7 @@ def validate(pins=None, release=None, workflows=None, constraints=None, root=ROO
             or not tool["source_urls"]
             or tool["source"] not in tool["source_urls"]
             or not all(url.startswith("https://") for url in tool["source_urls"])
-            or date.fromisoformat(tool["release_date"]) > date(2026, 9, 27)
+            or (name != "semgrep" and date.fromisoformat(tool["release_date"]) > date(2026, 9, 27))
             or tool["artifact"] not in tool["artifacts"]
         ):
             raise ValueError("tool version, provenance or artifact refused")
@@ -262,6 +294,11 @@ def validate(pins=None, release=None, workflows=None, constraints=None, root=ROO
             if tool["dependency_lock_sha256"] is not None:
                 hex_pin(tool["dependency_lock_sha256"], 64)
         if name == "semgrep":
+            if (
+                tool["release_date"] != "2026-10-02"
+                or tool.get("minimum_age_exception") != SEMGREP_AGE_EXCEPTION
+            ):
+                raise ValueError("Semgrep security-fix age exception required")
             if tool["license"] != "LGPL-2.1-or-later" or (
                 tool.get("owner_license_decision") != "keep_ci_only"
             ):
@@ -388,7 +425,7 @@ def validate(pins=None, release=None, workflows=None, constraints=None, root=ROO
         for line in constraints.splitlines()
         if line.strip() and not line.startswith("#")
     )
-    expected = "semgrep==1.178.0 " + " ".join(
+    expected = "semgrep==1.179.0 " + " ".join(
         "--hash=sha256:" + digest for digest in pins["tools"]["semgrep"]["artifacts"].values()
     )
     if requirements != expected:

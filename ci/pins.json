@@ -109,20 +109,20 @@
       "dependency_lock_sha256": "972a79b6f47347294ff9c63297e8783696e1d17324b6d6f18748b791883b0e60"
     },
     "semgrep": {
-      "version_to_verify": "1.178.0",
+      "version_to_verify": "1.179.0",
       "source": "https://pypi.org/pypi/semgrep/json",
       "source_urls": [
         "https://pypi.org/pypi/semgrep/json"
       ],
-      "release_date": "2026-09-23",
+      "release_date": "2026-10-02",
       "license": "LGPL-2.1-or-later",
       "usage_scope": "ci-only",
-      "artifact": "semgrep-1.178.0-cp310.cp311.cp312.cp313.cp314.py310.py311.py312.py313.py314-none-manylinux_2_34_x86_64.whl",
+      "artifact": "semgrep-1.179.0-cp310.cp311.cp312.cp313.cp314.py310.py311.py312.py313.py314-none-manylinux_2_34_x86_64.whl",
       "artifacts": {
-        "semgrep-1.178.0-cp310.cp311.cp312.cp313.cp314.py310.py311.py312.py313.py314-none-manylinux_2_34_x86_64.whl": "b7c4a4ba5cad1a6b0e76f7143c164b3f2853b9d0f902f2db2f64006257c941f2",
-        "semgrep-1.178.0-cp310.cp311.cp312.cp313.cp314.py310.py311.py312.py313.py314-none-macosx_11_0_arm64.whl": "33eb20066093799ab5fb9c4d3722e891d2bfb89218a145762a1f4397642b9ad2"
+        "semgrep-1.179.0-cp310.cp311.cp312.cp313.cp314.py310.py311.py312.py313.py314-none-manylinux_2_34_x86_64.whl": "b529c4db63f293918989b84ce4640f12f1b1e4680d9e7fcab5f3554f9113dfc5",
+        "semgrep-1.179.0-cp310.cp311.cp312.cp313.cp314.py310.py311.py312.py313.py314-none-macosx_11_0_arm64.whl": "9b57026f587a4bc7833bca2b6e4d6778072a79dcf0b9f2e5e01d3d5df39c7759"
       },
-      "sha256": "b7c4a4ba5cad1a6b0e76f7143c164b3f2853b9d0f902f2db2f64006257c941f2",
+      "sha256": "b529c4db63f293918989b84ce4640f12f1b1e4680d9e7fcab5f3554f9113dfc5",
       "image_digest": null,
       "artifact_format": "wheel",
       "owner_license_decision": "keep_ci_only",
@@ -130,7 +130,14 @@
       "python_requirement": ">=3.10",
       "glibc_requirement": ">=2.34",
       "dependency_lock": "ci/semgrep-requirements.txt",
-      "dependency_lock_sha256": "59ccf7d97302a3f207ce24d1cdf4605491539503ec6f497e9e2fa575d63640ee"
+      "dependency_lock_sha256": "b6bc07079e6d2bffea1fa92f721bcd7ceb8a82170ec5fef4b34491321d5ebb0f",
+      "minimum_age_exception": {
+        "kind": "security-fix",
+        "approved_by": "Claude",
+        "approved_on": "2026-10-15",
+        "release_age_days": 13,
+        "reason": "pyjwt <2.14 has published advisories; Semgrep 1.179.0 permits the fixed pyjwt 2.15.1 closure."
+      }
     },
     "osv-scanner": {
       "version_to_verify": "2.6.0",

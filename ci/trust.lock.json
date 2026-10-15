@@ -1,28 +1,29 @@
 {
+  "schema_version": 1,
   "editable": [
     "public/index.html"
   ],
   "files": {
     ".github/workflows/ci.yml": "5690f8064eb2de189328dcbb70b0a7a54842aaa3a74e0a8b367d7a2bd83f7e89",
     ".github/workflows/release.yml": "3d79bf38ee31d1bf0da8c4f6577016d0806f23fd6979f83da5becbc379d98e0d",
-    "README.md": "d6985a7ecaeca4cc73a76be90e19f76ce8cc983182e0672f627d2bdbbd97ccbb",
+    "README.md": "2acdd0db879b87d1680effac9fb1110c27fcd6e71246d3ffd7754943d9cfe960",
     "ci/artifact.lock.json": "07cc11fb200994512d7dbe6302416ad68eacee3d6fa780222f97eb5a95878a64",
     "ci/check-tools/package-lock.json": "972a79b6f47347294ff9c63297e8783696e1d17324b6d6f18748b791883b0e60",
     "ci/check-tools/package.json": "d7f60cd923489408a21ecaa21bbdbd0af63cf077db5fdcbb67512b477abe6268",
     "ci/check.py": "4e5e17365f28fc5378c1bcb2c8a97adbfbebf5f9560cc42731d24c72fff31b30",
-    "ci/deploy-tool/package-lock.json": "a0f6c272284f60c48eac81db876052f3562c2b000cf0e197ff34c5782d349439",
-    "ci/deploy-tool/package.json": "c99dd6f4e4b407d34ca552eff0ca1576d421d47058de06e955157016aea3b10c",
-    "ci/install_tool.py": "2a5b476d4c8bf9470478525d4d0fbf2938c53373f4188b8a579bb1922aae1bcf",
+    "ci/deploy-tool/package-lock.json": "645c653a4474782e4e66ba1f8cec9598874a8b2c75be0db545252526ed49b691",
+    "ci/deploy-tool/package.json": "23ec24f0788181224c1355562946e4588cf7e8eb5eb3afc94122110689cad695",
+    "ci/install_tool.py": "4a7b3a406e274f00fbc5301ed782c598c860a37948ea5e40ad1252e2a21fa311",
     "ci/licenses.lock.json": "716f494b7522b31b192c0a22fd435602b391d17b06fe15a1fc804ee2fc3b5cb6",
     "ci/lighthouse_check.py": "7fe559d55f8b7bf70b01f3a0e4090c1563d1509f4adef4e35ea883ee14d37cc3",
-    "ci/npm_tool.mjs": "0e2af29b796efb79a5ccbb11411a3dd6bd5c90c6adb31a382e0de3dffa39290a",
-    "ci/pin_check.py": "4f8f37c5e8e07d112e60904aa9d4fd1ee746c7985f84d1634b5234fa79b45cf5",
-    "ci/pins.json": "9e3c35559c701e287f8a16cfecd0fde8119a1c5df361d29cb1087454b05ff28d",
+    "ci/npm_tool.mjs": "ce54f1b6194142a669ebbdf551d5e7aa57be4240646f4ddf28318149566392b6",
+    "ci/pin_check.py": "13066aeeb8d4494cf32dcd6799a0aa35b34912b47e9972844b7016f44b198d9b",
+    "ci/pins.json": "6cc1d8cd0254b9958b327893ba5a575cd5c4746cc5a807bd28f5bfc83f59db62",
     "ci/playwright_e2e.mjs": "67458c95ef481eab9238d25078fb153cbe3e0c28a569f2018b74385187c01f03",
     "ci/playwright_e2e.py": "91e0ac54e48f5b7bb18f1ff6b436644f9ac8b48f838cbe7a1c7772c556ffa3b2",
-    "ci/release-pins.json": "b7b44ef80db5721eb91e93e80ca0f4d42469473d49204e67406318d5b16d7a99",
-    "ci/semgrep-constraints.txt": "5368e94b1bc732f570b41fd1291ae56e8eed3a914256666c8c51cfbd641085c5",
-    "ci/semgrep-requirements.txt": "59ccf7d97302a3f207ce24d1cdf4605491539503ec6f497e9e2fa575d63640ee",
+    "ci/release-pins.json": "7e9021fb4eb27368a70b6cf7aa0981fe64ec87448c5975bf26e725b56de4e6f4",
+    "ci/semgrep-constraints.txt": "81981e5b675b5fccb302a7d1a92c9f0aba3291de5efa9d486f634635b0d5c806",
+    "ci/semgrep-requirements.txt": "b6bc07079e6d2bffea1fa92f721bcd7ceb8a82170ec5fef4b34491321d5ebb0f",
     "ci/semgrep.yml": "d24572bb495e14b0e27b0aadf709b73adce07d17f0e878a01ba6837fc57ad7bd",
     "ci/test_static.py": "55c1984cbc40ee20c95ed368c15c3627a84c621a6af4b0c3051b43ee60a125d6",
     "index.html": "2855d1a351257329afbbe5b64560c8568e2699995902d84906c71696a0f945ad",
@@ -33,6 +34,5 @@
     "rights.html": "f5eed943d32c8f15ca7dfbdd1ef77fb00bdca8006c809e8ff6a89089b5664640",
     "styles.css": "a2c61e6b404017a7b7334946f2775ffb3006fe6756367ff90162a80c620d258b",
     "waitlist.js": "eb30724712e6de76f64c2b971da98cb7951081d08302de9763ec771647174cbf"
-  },
-  "schema_version": 1
+  }
 }

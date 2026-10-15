@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { inflateRawSync } from 'node:zlib';
 
 export const root = fileURLToPath(new URL('../', import.meta.url));
 const read = relative => JSON.parse(fs.readFileSync(path.join(root, relative)));
@@ -74,6 +75,123 @@ function verified(value, item, algorithm) {
   const expected = algorithm === 'sha512' ? item.integrity.slice(7) : item.sha256;
   assert.equal(createHash(algorithm).update(value).digest(algorithm === 'sha512' ? 'base64' : 'hex'), expected, 'download integrity mismatch');
 }
+// ZIP32 only. Bound metadata before inflating, then bound actual output as well.
+const ZIP_LIMIT = 512 * 1024 * 1024;
+function zipExtra(value) {
+  for (let offset = 0; offset < value.length;) {
+    assert(offset + 4 <= value.length, 'ZIP extra field truncated');
+    const kind = value.readUInt16LE(offset);
+    const length = value.readUInt16LE(offset + 2);
+    assert(kind !== 1, 'ZIP64 refused');
+    offset += 4 + length;
+    assert(offset <= value.length, 'ZIP extra field truncated');
+  }
+}
+export function zipEntries(value) {
+  assert(Buffer.isBuffer(value) && value.length >= 22 && value.length <= ZIP_LIMIT, 'ZIP size refused');
+  let end = value.length - 22;
+  const first = Math.max(0, end - 65535);
+  while (end >= first && (value.readUInt32LE(end) !== 0x06054b50 ||
+    end + 22 + value.readUInt16LE(end + 20) !== value.length)) end--;
+  assert(end >= first, 'ZIP end record missing');
+  const count = value.readUInt16LE(end + 10);
+  const start = value.readUInt32LE(end + 16);
+  assert(value.readUInt16LE(end + 4) === 0 && value.readUInt16LE(end + 6) === 0 &&
+    value.readUInt16LE(end + 8) === count, 'ZIP multidisk refused');
+  assert(count !== 0xffff && start !== 0xffffffff &&
+    value.readUInt32LE(end + 12) !== 0xffffffff, 'ZIP64 refused');
+  assert(count > 0 && count <= 4096 && start + value.readUInt32LE(end + 12) === end, 'ZIP directory refused');
+  const entries = [];
+  const names = new Set();
+  let offset = start, total = 0;
+  for (let i = 0; i < count; i++) {
+    assert(offset + 46 <= end && value.readUInt32LE(offset) === 0x02014b50, 'ZIP directory truncated');
+    const flags = value.readUInt16LE(offset + 8);
+    const method = value.readUInt16LE(offset + 10);
+    const packed = value.readUInt32LE(offset + 20);
+    const size = value.readUInt32LE(offset + 24);
+    const length = value.readUInt16LE(offset + 28);
+    const extra = value.readUInt16LE(offset + 30);
+    const comment = value.readUInt16LE(offset + 32);
+    const attributes = value.readUInt32LE(offset + 38);
+    const local = value.readUInt32LE(offset + 42);
+    assert(packed !== 0xffffffff && size !== 0xffffffff && local !== 0xffffffff &&
+      value.readUInt16LE(offset + 6) < 45, 'ZIP64 refused');
+    assert(!(flags & ~0x080e), 'ZIP encryption or flags refused');
+    assert(method === 0 || method === 8, 'ZIP compression refused');
+    assert(value.readUInt16LE(offset + 34) === 0, 'ZIP multidisk refused');
+    assert(length > 0 && length <= 4096 && offset + 46 + length + extra + comment <= end, 'ZIP name truncated');
+    const rawName = value.subarray(offset + 46, offset + 46 + length);
+    const name = rawName.toString('utf8');
+    assert(Buffer.from(name).equals(rawName) && !/[\\\x00-\x1f\x7f:]/.test(name), 'ZIP path refused');
+    const directory = name.endsWith('/');
+    const relative = directory ? name.slice(0, -1) : name;
+    assert(relative.split('/').every(part => part && part !== '.' && part !== '..'), 'ZIP path refused');
+    assert(!names.has(relative), 'ZIP duplicate path refused');
+    names.add(relative);
+    const type = (attributes >>> 16) & 0xf000;
+    assert(type === 0 || type === (directory ? 0x4000 : 0x8000), 'ZIP symlink or special entry refused');
+    assert(directory || !(attributes & 0x10), 'ZIP directory attributes refused');
+    zipExtra(value.subarray(offset + 46 + length, offset + 46 + length + extra));
+    total += size;
+    assert(total <= ZIP_LIMIT && (!directory || size === 0), 'ZIP expanded size refused');
+    assert(local + 30 <= start && value.readUInt32LE(local) === 0x04034b50, 'ZIP local header refused');
+    const localLength = value.readUInt16LE(local + 26);
+    const localExtra = value.readUInt16LE(local + 28);
+    const data = local + 30 + localLength + localExtra;
+    assert(value.readUInt32LE(local + 18) !== 0xffffffff &&
+      value.readUInt32LE(local + 22) !== 0xffffffff, 'ZIP64 refused');
+    assert(data + packed <= start && value.readUInt16LE(local + 4) < 45, 'ZIP local size or ZIP64 refused');
+    assert(value.readUInt16LE(local + 6) === flags && value.readUInt16LE(local + 8) === method &&
+      rawName.equals(value.subarray(local + 30, local + 30 + localLength)), 'ZIP local metadata differs');
+    zipExtra(value.subarray(local + 30 + localLength, data));
+    if (!(flags & 8)) {
+      assert(value.readUInt32LE(local + 14) === value.readUInt32LE(offset + 16) &&
+        value.readUInt32LE(local + 18) === packed && value.readUInt32LE(local + 22) === size, 'ZIP local sizes differ');
+    }
+    assert(method !== 0 || packed === size, 'ZIP stored size differs');
+    entries.push({ name: relative, directory, size, method, mode: 0o600 | ((attributes >>> 16) & 0o111),
+      local, end: data + packed, compressed: value.subarray(data, data + packed) });
+    offset += 46 + length + extra + comment;
+  }
+  assert(offset === end, 'ZIP directory size differs');
+  let previous = 0;
+  for (const entry of [...entries].sort((a, b) => a.local - b.local)) {
+    assert(entry.local >= previous, 'ZIP overlapping entries refused');
+    previous = entry.end;
+    for (let parent = path.posix.dirname(entry.name); parent !== '.'; parent = path.posix.dirname(parent)) {
+      assert(!entries.some(other => other.name === parent && !other.directory), 'ZIP file parent refused');
+    }
+  }
+  return entries;
+}
+function zipContent(entry) {
+  const value = entry.method === 0 ? entry.compressed :
+    inflateRawSync(entry.compressed, { maxOutputLength: Math.max(1, entry.size) });
+  assert.equal(value.length, entry.size, 'ZIP expanded size differs');
+  return value;
+}
+export function extractZip(value, directory) {
+  const entries = zipEntries(value);
+  // A fresh destination and exclusive files prevent pre-existing links/overwrites.
+  for (let p = path.resolve(directory, '..');; p = path.dirname(p)) {
+    assert(fs.lstatSync(p).isDirectory() && !fs.lstatSync(p).isSymbolicLink(), 'ZIP destination links refused');
+    if (p === path.dirname(p)) break;
+  }
+  fs.mkdirSync(directory, { mode: 0o700 });
+  for (const entry of entries) {
+    const target = path.join(directory, entry.name);
+    fs.mkdirSync(entry.directory ? target : path.dirname(target), { recursive: true, mode: 0o700 });
+    if (!entry.directory) {
+      fs.writeFileSync(target, zipContent(entry), { flag: 'wx', mode: entry.mode });
+      fs.chmodSync(target, entry.mode);
+    }
+  }
+}
+export function extractChromium(value, directory) {
+  verified(value, browser, 'sha256');
+  extractZip(value, directory);
+}
 async function download(items) {
   fs.mkdirSync(path.join(root, '.tools/downloads'), { recursive: false });
   for (const [i, item] of [...items, browser].entries()) {
@@ -108,22 +226,18 @@ function install(items) {
     assert.equal(read(`.tools/npm/check-tools/node_modules/${tool.npm_package}/package.json`).version, tool.version_to_verify);
   }
   const directory = path.join(root, '.tools/chromium');
-  fs.mkdirSync(directory);
-  command(['unzip', '-q', path.join(root, `.tools/downloads/${items.length}.artifact`), '-d', directory]);
-  fs.chmodSync(shell, 0o700);
+  extractChromium(regular(path.join(root, `.tools/downloads/${items.length}.artifact`)), directory);
 }
 export function installed() {
   const items = validate();
   const installedLock = regular(path.join(root, '.tools/npm/check-tools/package-lock.json'));
   assert.equal(hash(installedLock), pins.tools['playwright-core'].dependency_lock_sha256);
-  verified(regular(path.join(root, `.tools/downloads/${items.length}.artifact`)), browser, 'sha256');
+  const archive = regular(path.join(root, `.tools/downloads/${items.length}.artifact`));
+  verified(archive, browser, 'sha256');
   // Bind the extracted executable to the hash-checked archive, not its ZIP hash.
-  const archive = path.join(root, `.tools/downloads/${items.length}.artifact`);
-  const expected = spawnSync('unzip', ['-p', archive, 'chrome-headless-shell-linux64/chrome-headless-shell'], {
-    env, timeout: 15000, maxBuffer: 400 * 1024 * 1024,
-  });
-  assert.equal(expected.status, 0, 'browser archive member missing');
-  assert.equal(hash(regular(shell)), hash(expected.stdout), 'extracted browser mismatch');
+  const expected = zipEntries(archive).find(entry => entry.name === 'chrome-headless-shell-linux64/chrome-headless-shell');
+  assert(expected && !expected.directory, 'browser archive member missing');
+  assert.equal(hash(regular(shell)), hash(zipContent(expected)), 'extracted browser mismatch');
   const libraries = command(['ldd', shell]);
   assert(!libraries.includes('not found'), `BLOCKED missing browser runtime libraries: ${libraries}`);
   assert(command([shell, '--version']).includes(browser.version_to_verify), 'browser version mismatch');

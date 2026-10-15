@@ -80,6 +80,6 @@
     "license": "MIT OR Apache-2.0",
     "integrity": "sha512-oqquqqtHOevn17hzI7qRzU+MiOaCU2UZRLPIZStjGlhwYbxe3hk4Stq3knfcIlGfMSfgM4iycZKeb1fEF5mRTQ==",
     "dependency_lock": "ci/deploy-tool/package-lock.json",
-    "dependency_lock_sha256": "a0f6c272284f60c48eac81db876052f3562c2b000cf0e197ff34c5782d349439"
+    "dependency_lock_sha256": "645c653a4474782e4e66ba1f8cec9598874a8b2c75be0db545252526ed49b691"
   }
 }
