@@ -1,4 +1,4 @@
-// Both browser checks run in the pinned Node container, using the verified CfT ZIP.
+// The pinned Playwright image supplies libraries; both checks use the verified CfT ZIP.
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';

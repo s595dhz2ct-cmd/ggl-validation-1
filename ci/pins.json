@@ -175,7 +175,8 @@
       "mode": "reviewed_base_containers",
       "digests": {
         "node": "node@sha256:43ac6c60b8f89723f746e8a92ce91abd5017e627ce1ddfe4238355d3a30b772c",
-        "python": "python@sha256:54c85f3c47607a77f32adec749d3c81d1348bf25833671f512b26a9b6d778cb3"
+        "python": "python@sha256:54c85f3c47607a77f32adec749d3c81d1348bf25833671f512b26a9b6d778cb3",
+        "browser": "mcr.microsoft.com/playwright@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27"
       },
       "owner_decision": "Alex 2026-10-15 'ok': no custom CI image; run checks in the already-reviewed Node 22.23.3 (node@sha256:43ac6c60b8f89723f746e8a92ce91abd5017e627ce1ddfe4238355d3a30b772c) and Python 3.12.15 (python@sha256:54c85f3c47607a77f32adec749d3c81d1348bf25833671f512b26a9b6d778cb3) base images as job containers; install every tool from hash-checked artifacts with complete locks; osv-scanner uses the live OSV database at scan time and logs its version/time instead of a frozen snapshot."
     },
@@ -221,6 +222,15 @@
       "node_requirement": ">=20",
       "dependency_lock": "ci/check-tools/package-lock.json",
       "dependency_lock_sha256": "972a79b6f47347294ff9c63297e8783696e1d17324b6d6f18748b791883b0e60"
+    },
+    "browser": {
+      "digest": "sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27",
+      "source": "https://mcr.microsoft.com/v2/playwright/manifests/v1.63.0-noble",
+      "tag": "v1.63.0-noble",
+      "created": "2026-09-04T23:42:21Z",
+      "node_major": 24,
+      "license": "Apache-2.0",
+      "linux_amd64_manifest": "sha256:bc6ab0d6d44ff4826e4cb8c1e6d801e185bfc42bb0753f8e2a30efc70db054c7"
     }
   },
   "lighthouse_floors": {

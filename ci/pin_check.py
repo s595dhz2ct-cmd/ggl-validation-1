@@ -28,6 +28,21 @@ ALLOW = ["MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "CC0-1.0"]
 BASES = {
     "node": "node@sha256:43ac6c60b8f89723f746e8a92ce91abd5017e627ce1ddfe4238355d3a30b772c",
     "python": "python@sha256:54c85f3c47607a77f32adec749d3c81d1348bf25833671f512b26a9b6d778cb3",
+    "browser": (
+        "mcr.microsoft.com/playwright@sha256:"
+        "eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27"
+    ),
+}
+BROWSER_EVIDENCE = {
+    "digest": BASES["browser"].split("@", 1)[1],
+    "source": "https://mcr.microsoft.com/v2/playwright/manifests/v1.63.0-noble",
+    "tag": "v1.63.0-noble",
+    "created": "2026-09-04T23:42:21Z",
+    "node_major": 24,
+    "license": "Apache-2.0",
+    "linux_amd64_manifest": (
+        "sha256:bc6ab0d6d44ff4826e4cb8c1e6d801e185bfc42bb0753f8e2a30efc70db054c7"
+    ),
 }
 LOCKS = {
     "checks": ("ci/check-tools/package-lock.json", 116),
@@ -89,7 +104,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     container:
-      image: {BASES["node" if browser else "python"]}
+      image: {BASES["browser" if browser else "python"]}
       options: --user 1001:1001 --cap-drop=ALL --security-opt=no-new-privileges
     steps:
       - name: Exact secret-free checkout
@@ -332,8 +347,11 @@ def validate(pins=None, release=None, workflows=None, constraints=None, root=ROO
     if pins["tools"]["ci-image"]["digests"] != BASES or release["ci_base_image_digests"] != BASES:
         raise ValueError("unresolved_tool_pin: ci-image.digests refused")
     for name, image in BASES.items():
-        if image != name + "@" + pins["tools"][name]["digest"]:
+        repository = "mcr.microsoft.com/playwright" if name == "browser" else name
+        if image != repository + "@" + pins["tools"][name]["digest"]:
             raise ValueError("base image binding refused")
+    if pins["tools"]["browser"] != BROWSER_EVIDENCE:
+        raise ValueError("browser image evidence refused")
     browser = pins["tools"]["chromium"]
     if (
         browser["sha256"] != "a9da028861a0cf789ff25c2fed45f5f1aaf969ed9247835b6a7821a4f7af9d1d"

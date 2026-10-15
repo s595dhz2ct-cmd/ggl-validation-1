@@ -34,10 +34,21 @@ function regular(filename) {
   assert(s.isFile() && s.nlink === 1, 'artifact type refused');
   return fs.readFileSync(filename);
 }
+export function validateRuntime(version = process.versions.node,
+  workflow = fs.readFileSync(path.join(root, '.github/workflows/ci.yml'), 'utf8')) {
+  assert.equal(version.split('.')[0], '24', 'Node major mismatch');
+  const image = 'mcr.microsoft.com/playwright@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27';
+  assert.equal(pins.tools['ci-image'].digests.browser, image, 'browser image pin mismatch');
+  const jobs = workflow.split(/^  (?=[a-z-]+:\n)/m);
+  for (const name of ['playwright', 'lighthouse']) {
+    const job = jobs.filter(block => block.startsWith(`${name}:\n`));
+    assert.equal(job.length, 1, 'browser job coverage mismatch');
+    assert.deepEqual(job[0].match(/^      image: .+$/gm), [`      image: ${image}`],
+      'browser job image mismatch');
+  }
+}
 export function validate() {
-  assert.equal(process.version, 'v22.23.3', 'Node version mismatch');
-  assert.equal(pins.tools['ci-image'].digests.node,
-    'node@sha256:43ac6c60b8f89723f746e8a92ce91abd5017e627ce1ddfe4238355d3a30b772c');
+  validateRuntime();
   const lockPath = 'ci/check-tools/package-lock.json';
   const value = regular(path.join(root, lockPath));
   const lock = JSON.parse(value);
