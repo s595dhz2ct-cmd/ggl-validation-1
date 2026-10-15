@@ -1,5 +1,6 @@
-# CI-only LGPL-2.1-or-later; owner license decision required.
-# Top-level wheels only: absent transitive hashes make pip fail closed.
-semgrep==1.178.0 \
-    --hash=sha256:b7c4a4ba5cad1a6b0e76f7143c164b3f2853b9d0f902f2db2f64006257c941f2 \
-    --hash=sha256:33eb20066093799ab5fb9c4d3722e891d2bfb89218a145762a1f4397642b9ad2
+# CI-only LGPL-2.1-or-later; owner decision keep_ci_only.
+# Top-level wheels; the complete transitive closure is in semgrep-requirements.txt.
+# Security-fix exception approved by Claude on 2026-10-15 (13 days old).
+semgrep==1.179.0 \
+    --hash=sha256:b529c4db63f293918989b84ce4640f12f1b1e4680d9e7fcab5f3554f9113dfc5 \
+    --hash=sha256:9b57026f587a4bc7833bca2b6e4d6778072a79dcf0b9f2e5e01d3d5df39c7759

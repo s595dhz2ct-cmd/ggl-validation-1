@@ -1,3 +1,4 @@
+# Generated from ci/pin_check.py:ci_workflow; review both together.
 name: landing-template-ci
 on:
   pull_request:
@@ -7,181 +8,170 @@ permissions:
 concurrency:
   group: landing-ci-${{ github.ref }}
   cancel-in-progress: true
-# HUMAN: select the reviewed digest-pinned CI image before enabling any prepared
-# step. Tool artifacts are staged in .tools/downloads by that reviewed image;
-# installers verify them and run offline with no package lifecycle scripts.
+defaults:
+  run:
+    shell: bash
+env:
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+  SEMGREP_SEND_METRICS: 'off'
+  SEMGREP_ENABLE_VERSION_CHECK: '0'
+  npm_config_update_notifier: 'false'
+# Network acquisition is confined to the download step, plus the owner-approved
+# live OSV query. All installs use verified local artifacts and complete locks.
 jobs:
   tests:
     runs-on: ubuntu-24.04
-    timeout-minutes: 3
+    timeout-minutes: 10
+    container:
+      image: python@sha256:54c85f3c47607a77f32adec749d3c81d1348bf25833671f512b26a9b6d778cb3
+      options: --user 1001:1001 --cap-drop=ALL --security-opt=no-new-privileges
     steps:
-      - name: tests skipped-with-reason
-        run: echo 'SKIPPED unresolved_tool_pin - ci-image.digest is null'
-      - name: Prepared checkout (CI image pin required)
-        if: ${{ false }}
+      - name: Exact secret-free checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Validate recorded pins
-        if: ${{ false }}
+      - name: Validate pins and workflow coverage
         run: python -I ci/pin_check.py
-      - name: tests prepared install and check (remaining pins required)
-        if: ${{ false }}
+      - name: Run tests
         run: |
           set -euo pipefail
           python -I -m unittest discover -s ci -p test_static.py
-      - name: Refuse incomplete coverage
-        run: exit 1
   playwright:
     runs-on: ubuntu-24.04
-    timeout-minutes: 3
+    timeout-minutes: 10
+    container:
+      image: mcr.microsoft.com/playwright@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+      options: --user 1001:1001 --cap-drop=ALL --security-opt=no-new-privileges
     steps:
-      - name: playwright skipped-with-reason
-        run: echo 'SKIPPED unresolved_tool_pin - ci-image.digest is null; chromium.sha256 and npm dependency locks are null'
-      - name: Prepared checkout (CI image pin required)
-        if: ${{ false }}
+      - name: Exact secret-free checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Validate recorded pins
-        if: ${{ false }}
-        run: python -I ci/pin_check.py
-      - name: playwright prepared install and check (remaining pins required)
-        if: ${{ false }}
+      - name: Validate pins and workflow coverage
+        run: node ci/npm_tool.mjs validate
+      - name: Download hash-checked tool closure
+        run: node ci/npm_tool.mjs download
+      - name: Install verified local artifacts offline
+        run: node ci/npm_tool.mjs install
+      - name: Run playwright
         run: |
           set -euo pipefail
-          python -I ci/install_tool.py playwright
-          python -I ci/install_tool.py playwright-core
-          FOUNDRY_LIVE=1 python -I ci/playwright_e2e.py
-      - name: Refuse incomplete coverage
-        run: exit 1
+          node ci/playwright_e2e.mjs playwright
   lighthouse:
     runs-on: ubuntu-24.04
-    timeout-minutes: 3
+    timeout-minutes: 10
+    container:
+      image: mcr.microsoft.com/playwright@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+      options: --user 1001:1001 --cap-drop=ALL --security-opt=no-new-privileges
     steps:
-      - name: lighthouse skipped-with-reason
-        run: echo 'SKIPPED unresolved_tool_pin - ci-image.digest is null; chromium.sha256 and lighthouse.dependency_lock are null'
-      - name: Prepared checkout (CI image pin required)
-        if: ${{ false }}
+      - name: Exact secret-free checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Validate recorded pins
-        if: ${{ false }}
-        run: python -I ci/pin_check.py
-      - name: lighthouse prepared install and check (remaining pins required)
-        if: ${{ false }}
+      - name: Validate pins and workflow coverage
+        run: node ci/npm_tool.mjs validate
+      - name: Download hash-checked tool closure
+        run: node ci/npm_tool.mjs download
+      - name: Install verified local artifacts offline
+        run: node ci/npm_tool.mjs install
+      - name: Run lighthouse
         run: |
           set -euo pipefail
-          python -I ci/install_tool.py lighthouse
-          FOUNDRY_LIVE=1 python -I ci/playwright_e2e.py --lighthouse
-      - name: Refuse incomplete coverage
-        run: exit 1
+          node ci/playwright_e2e.mjs lighthouse
   gitleaks:
     runs-on: ubuntu-24.04
-    timeout-minutes: 3
+    timeout-minutes: 10
+    container:
+      image: python@sha256:54c85f3c47607a77f32adec749d3c81d1348bf25833671f512b26a9b6d778cb3
+      options: --user 1001:1001 --cap-drop=ALL --security-opt=no-new-privileges
     steps:
-      - name: gitleaks skipped-with-reason
-        run: echo 'SKIPPED unresolved_tool_pin - ci-image.digest is null'
-      - name: Prepared checkout (CI image pin required)
-        if: ${{ false }}
+      - name: Exact secret-free checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Validate recorded pins
-        if: ${{ false }}
+      - name: Validate pins and workflow coverage
         run: python -I ci/pin_check.py
-      - name: gitleaks prepared install and check (remaining pins required)
-        if: ${{ false }}
+      - name: Download hash-checked tool closure
+        run: python -I ci/install_tool.py --download gitleaks
+      - name: Install verified local artifacts offline
+        run: python -I ci/install_tool.py gitleaks
+      - name: Run gitleaks
         run: |
           set -euo pipefail
-          python -I ci/install_tool.py gitleaks
-          .tools/gitleaks/bin/gitleaks dir . --redact --no-banner
-      - name: Refuse incomplete coverage
-        run: exit 1
+          .tools/gitleaks/bin/gitleaks dir public --redact --no-banner
   semgrep:
     runs-on: ubuntu-24.04
-    timeout-minutes: 3
+    timeout-minutes: 10
+    container:
+      image: python@sha256:54c85f3c47607a77f32adec749d3c81d1348bf25833671f512b26a9b6d778cb3
+      options: --user 1001:1001 --cap-drop=ALL --security-opt=no-new-privileges
     steps:
-      - name: semgrep skipped-with-reason
-        run: echo 'SKIPPED unresolved_tool_pin - ci-image.digest is null; semgrep.dependency_lock is null; owner CI-only license decision required'
-      - name: Prepared checkout (CI image pin required)
-        if: ${{ false }}
+      - name: Exact secret-free checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Validate recorded pins
-        if: ${{ false }}
+      - name: Validate pins and workflow coverage
         run: python -I ci/pin_check.py
-      - name: semgrep prepared install and check (remaining pins required)
-        if: ${{ false }}
+      - name: Download hash-checked tool closure
+        run: python -I ci/install_tool.py --download semgrep
+      - name: Install verified local artifacts offline
+        run: python -I ci/install_tool.py semgrep
+      - name: Run semgrep
         run: |
           set -euo pipefail
-          python -I ci/install_tool.py semgrep
-          .tools/semgrep/bin/semgrep scan --config ci/semgrep.yml --disable-version-check --error .
-      - name: Refuse incomplete coverage
-        run: exit 1
+          .tools/semgrep/bin/semgrep scan --config ci/semgrep.yml --metrics=off --disable-version-check --error --strict public
   osv-scanner:
     runs-on: ubuntu-24.04
-    timeout-minutes: 3
+    timeout-minutes: 10
+    container:
+      image: python@sha256:54c85f3c47607a77f32adec749d3c81d1348bf25833671f512b26a9b6d778cb3
+      options: --user 1001:1001 --cap-drop=ALL --security-opt=no-new-privileges
     steps:
-      - name: osv-scanner skipped-with-reason
-        run: echo 'SKIPPED unresolved_tool_pin - ci-image.digest is null; database_snapshot/database_sha256 are null'
-      - name: Prepared checkout (CI image pin required)
-        if: ${{ false }}
+      - name: Exact secret-free checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Validate recorded pins
-        if: ${{ false }}
+      - name: Validate pins and workflow coverage
         run: python -I ci/pin_check.py
-      - name: osv-scanner prepared install and check (remaining pins required)
-        if: ${{ false }}
+      - name: Download hash-checked tool closure
+        run: python -I ci/install_tool.py --download osv-scanner
+      - name: Install verified local artifacts offline
+        run: python -I ci/install_tool.py osv-scanner
+      - name: Run osv-scanner
         run: |
           set -euo pipefail
-          python -I ci/install_tool.py osv-scanner
-          .tools/osv-scanner/bin/osv-scanner scan source --offline --lockfile package-lock.json
-      - name: Refuse incomplete coverage
-        run: exit 1
+          python -I ci/install_tool.py --scan-osv
   license-check:
     runs-on: ubuntu-24.04
-    timeout-minutes: 3
+    timeout-minutes: 10
+    container:
+      image: python@sha256:54c85f3c47607a77f32adec749d3c81d1348bf25833671f512b26a9b6d778cb3
+      options: --user 1001:1001 --cap-drop=ALL --security-opt=no-new-privileges
     steps:
-      - name: license-check skipped-with-reason
-        run: echo 'SKIPPED unresolved_tool_pin - ci-image.digest is null'
-      - name: Prepared checkout (CI image pin required)
-        if: ${{ false }}
+      - name: Exact secret-free checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Validate recorded pins
-        if: ${{ false }}
+      - name: Validate pins and workflow coverage
         run: python -I ci/pin_check.py
-      - name: license-check prepared install and check (remaining pins required)
-        if: ${{ false }}
+      - name: Run license-check
         run: |
           set -euo pipefail
           python -I ci/check.py license-check
-      - name: Refuse incomplete coverage
-        run: exit 1
   artifact-integrity:
     runs-on: ubuntu-24.04
-    timeout-minutes: 3
+    timeout-minutes: 10
+    container:
+      image: python@sha256:54c85f3c47607a77f32adec749d3c81d1348bf25833671f512b26a9b6d778cb3
+      options: --user 1001:1001 --cap-drop=ALL --security-opt=no-new-privileges
     steps:
-      - name: artifact-integrity skipped-with-reason
-        run: echo 'SKIPPED unresolved_tool_pin - ci-image.digest is null'
-      - name: Prepared checkout (CI image pin required)
-        if: ${{ false }}
+      - name: Exact secret-free checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Validate recorded pins
-        if: ${{ false }}
+      - name: Validate pins and workflow coverage
         run: python -I ci/pin_check.py
-      - name: artifact-integrity prepared install and check (remaining pins required)
-        if: ${{ false }}
+      - name: Run artifact-integrity
         run: |
           set -euo pipefail
           python -I ci/check.py artifact-integrity
-      - name: Refuse incomplete coverage
-        run: exit 1

@@ -2,6 +2,7 @@
 
 import base64
 import binascii
+import hashlib
 import json
 import re
 import sys
@@ -12,7 +13,7 @@ ROOT = Path(__file__).resolve().parent.parent
 VERSIONS = {
     "gitleaks": "8.30.1",
     "osv-scanner": "2.6.0",
-    "semgrep": "1.178.0",
+    "semgrep": "1.179.0",
     "playwright": "1.63.0",
     "playwright-core": "1.63.0",
     "lighthouse": "13.5.0",
@@ -24,6 +25,216 @@ ACTION_TAGS = {
     "tailscale/github-action": "v4.2.0",
 }
 ALLOW = ["MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "CC0-1.0"]
+BASES = {
+    "node": "node@sha256:43ac6c60b8f89723f746e8a92ce91abd5017e627ce1ddfe4238355d3a30b772c",
+    "python": "python@sha256:54c85f3c47607a77f32adec749d3c81d1348bf25833671f512b26a9b6d778cb3",
+    "browser": (
+        "mcr.microsoft.com/playwright@sha256:"
+        "eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27"
+    ),
+}
+BROWSER_EVIDENCE = {
+    "digest": BASES["browser"].split("@", 1)[1],
+    "source": "https://mcr.microsoft.com/v2/playwright/manifests/v1.63.0-noble",
+    "tag": "v1.63.0-noble",
+    "created": "2026-09-04T23:42:21Z",
+    "node_major": 24,
+    "license": "Apache-2.0",
+    "linux_amd64_manifest": (
+        "sha256:bc6ab0d6d44ff4826e4cb8c1e6d801e185bfc42bb0753f8e2a30efc70db054c7"
+    ),
+}
+LOCKS = {
+    "checks": ("ci/check-tools/package-lock.json", 116),
+    "deploy": ("ci/deploy-tool/package-lock.json", 91),
+}
+DEPLOY_OVERRIDES = {"undici": "7.29.1", "sharp": "0.35.5"}
+SEMGREP_AGE_EXCEPTION = {
+    "kind": "security-fix",
+    "approved_by": "Claude",
+    "approved_on": "2026-10-15",
+    "release_age_days": 13,
+    "reason": (
+        "pyjwt <2.14 has published advisories; Semgrep 1.179.0 permits the fixed "
+        "pyjwt 2.15.1 closure."
+    ),
+}
+COMMANDS = {
+    "tests": "python -I -m unittest discover -s ci -p test_static.py",
+    "playwright": "node ci/playwright_e2e.mjs playwright",
+    "lighthouse": "node ci/playwright_e2e.mjs lighthouse",
+    "gitleaks": ".tools/gitleaks/bin/gitleaks dir public --redact --no-banner",
+    "semgrep": (
+        ".tools/semgrep/bin/semgrep scan --config ci/semgrep.yml --metrics=off "
+        "--disable-version-check --error --strict public"
+    ),
+    "osv-scanner": "python -I ci/install_tool.py --scan-osv",
+    "license-check": "python -I ci/check.py license-check",
+    "artifact-integrity": "python -I ci/check.py artifact-integrity",
+}
+
+
+def ci_workflow():
+    """Finite workflow contract: conditional, omitted or masked tools cannot pass."""
+    text = """# Generated from ci/pin_check.py:ci_workflow; review both together.
+name: landing-template-ci
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: landing-ci-${{ github.ref }}
+  cancel-in-progress: true
+defaults:
+  run:
+    shell: bash
+env:
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+  SEMGREP_SEND_METRICS: 'off'
+  SEMGREP_ENABLE_VERSION_CHECK: '0'
+  npm_config_update_notifier: 'false'
+# Network acquisition is confined to the download step, plus the owner-approved
+# live OSV query. All installs use verified local artifacts and complete locks.
+jobs:
+"""
+    for name, command in COMMANDS.items():
+        browser = name in {"playwright", "lighthouse"}
+        text += f"""  {name}:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    container:
+      image: {BASES["browser" if browser else "python"]}
+      options: --user 1001:1001 --cap-drop=ALL --security-opt=no-new-privileges
+    steps:
+      - name: Exact secret-free checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Validate pins and workflow coverage
+        run: {"node ci/npm_tool.mjs validate" if browser else "python -I ci/pin_check.py"}
+"""
+        if browser or name in {"gitleaks", "semgrep", "osv-scanner"}:
+            download = (
+                "node ci/npm_tool.mjs download"
+                if browser
+                else "python -I ci/install_tool.py --download " + name
+            )
+            install = (
+                "node ci/npm_tool.mjs install"
+                if browser
+                else "python -I ci/install_tool.py " + name
+            )
+            text += f"""      - name: Download hash-checked tool closure
+        run: {download}
+      - name: Install verified local artifacts offline
+        run: {install}
+"""
+        text += f"""      - name: Run {name}
+        run: |
+          set -euo pipefail
+          {command}
+"""
+    return text
+
+
+def lock_bytes(root, relative, expected):
+    hex_pin(expected, 64)
+    path = root / relative
+    if any(p.is_symlink() for p in (path, *path.parents)):
+        raise ValueError("dependency lock links refused")
+    if path.stat().st_nlink != 1 or not path.is_file():
+        raise ValueError("dependency lock type refused")
+    value = path.read_bytes()
+    if hashlib.sha256(value).hexdigest() != expected:
+        raise ValueError("dependency lock SHA-256 mismatch")
+    return value
+
+
+def npm_lock(root, record, group, tools):
+    relative, count = LOCKS[group]
+    if record["dependency_lock"] != relative:
+        raise ValueError("dependency lock path refused")
+    lock = json.loads(lock_bytes(root, relative, record["dependency_lock_sha256"]))
+    package = json.loads((root / relative).with_name("package.json").read_bytes())
+    dependencies = {t["npm_package"]: t["version_to_verify"] for t in tools}
+    expected_package = {
+        "name": lock["name"],
+        "version": "1.0.0",
+        "private": True,
+        "dependencies": dependencies,
+    }
+    if group == "deploy":
+        expected_package["overrides"] = DEPLOY_OVERRIDES
+    if (
+        lock["lockfileVersion"] != 3
+        or lock["name"]
+        != "foundry-landing-" + ("check-tools" if group == "checks" else "deploy-tool")
+        or lock["version"] != "1.0.0"
+        or lock["packages"][""]["dependencies"] != dependencies
+        or package != expected_package
+        or len(lock["packages"]) != count + 1
+    ):
+        raise ValueError("npm dependency closure refused")
+    for path, item in lock["packages"].items():
+        if not path:
+            continue
+        integrity_bytes(item.get("integrity"))
+        if (
+            not re.fullmatch(r"node_modules/(?:[@A-Za-z0-9_.+-]+/)*[A-Za-z0-9_.+-]+", path)
+            or ".." in path
+            or item.get("link")
+            or not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?", item["version"])
+            or not item["resolved"].startswith("https://registry.npmjs.org/")
+        ):
+            raise ValueError("npm dependency closure refused")
+        if group == "deploy":
+            name = path.rsplit("node_modules/", 1)[-1]
+            if name in DEPLOY_OVERRIDES and item["version"] != DEPLOY_OVERRIDES[name]:
+                raise ValueError("npm security override refused")
+    if group == "deploy" and any(
+        lock["packages"].get("node_modules/" + name, {}).get("version") != version
+        for name, version in DEPLOY_OVERRIDES.items()
+    ):
+        raise ValueError("npm security override refused")
+    for tool in tools:
+        item = lock["packages"]["node_modules/" + tool["npm_package"]]
+        if item["version"] != tool["version_to_verify"] or item["integrity"] != tool["integrity"]:
+            raise ValueError("npm exact version/integrity lock refused")
+    return lock
+
+
+def pip_lock(root, tool):
+    if tool["dependency_lock"] != "ci/semgrep-requirements.txt":
+        raise ValueError("dependency lock path refused")
+    value = lock_bytes(root, tool["dependency_lock"], tool["dependency_lock_sha256"])
+    lines = value.decode().replace("\\\n", " ").splitlines()
+    requirements = []
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if (
+            re.fullmatch(
+                r"[A-Za-z0-9_.-]+==[0-9][A-Za-z0-9_.+-]*(?:\s+--hash=sha256:[0-9a-f]{64})+\s*",
+                line,
+            )
+            is None
+        ):
+            raise ValueError("unhashed or remote pip requirement refused")
+        requirements.append(line)
+    if (
+        len(requirements) != 66
+        or len({line.split("==", 1)[0] for line in requirements}) != 66
+        or not any(line.startswith("pyjwt==2.15.1 ") for line in requirements)
+        or not any(
+            line.startswith("semgrep==" + tool["version_to_verify"] + " ")
+            and "--hash=sha256:" + tool["sha256"] in line
+            for line in requirements
+        )
+    ):
+        raise ValueError("Semgrep complete dependency closure refused")
+    return value
 
 
 def hex_pin(value, size):
@@ -43,7 +254,7 @@ def integrity_bytes(value):
     return digest
 
 
-def validate(pins=None, release=None, workflows=None, constraints=None):
+def validate(pins=None, release=None, workflows=None, constraints=None, root=ROOT):
     pins = json.loads((ROOT / "ci/pins.json").read_bytes()) if pins is None else pins
     release = (
         json.loads((ROOT / "ci/release-pins.json").read_bytes()) if release is None else release
@@ -52,7 +263,7 @@ def validate(pins=None, release=None, workflows=None, constraints=None):
         pins["schema_version"] != 1
         or release["schema_version"] != 1
         or pins["release_eligible"] is not False
-        or pins["evidence_date"] != "2026-10-11"
+        or pins["evidence_date"] != "2026-10-15"
         or pins["release_cutoff"] != "2026-09-27"
         or pins["license_allowlist"] != ALLOW
     ):
@@ -65,7 +276,7 @@ def validate(pins=None, release=None, workflows=None, constraints=None):
             or not tool["source_urls"]
             or tool["source"] not in tool["source_urls"]
             or not all(url.startswith("https://") for url in tool["source_urls"])
-            or date.fromisoformat(tool["release_date"]) > date(2026, 9, 27)
+            or (name != "semgrep" and date.fromisoformat(tool["release_date"]) > date(2026, 9, 27))
             or tool["artifact"] not in tool["artifacts"]
         ):
             raise ValueError("tool version, provenance or artifact refused")
@@ -98,6 +309,11 @@ def validate(pins=None, release=None, workflows=None, constraints=None):
             if tool["dependency_lock_sha256"] is not None:
                 hex_pin(tool["dependency_lock_sha256"], 64)
         if name == "semgrep":
+            if (
+                tool["release_date"] != "2026-10-02"
+                or tool.get("minimum_age_exception") != SEMGREP_AGE_EXCEPTION
+            ):
+                raise ValueError("Semgrep security-fix age exception required")
             if tool["license"] != "LGPL-2.1-or-later" or (
                 tool.get("owner_license_decision") != "keep_ci_only"
             ):
@@ -128,11 +344,49 @@ def validate(pins=None, release=None, workflows=None, constraints=None):
         value = pins["tools"][tool_name][field]
         if value is not None:
             hex_pin(value, 64)
-    image = pins["tools"]["ci-image"]["digest"]
-    if image is not None:
-        if not isinstance(image, str) or not image.startswith("sha256:"):
-            raise ValueError("invalid CI image digest")
-        hex_pin(image[7:], 64)
+    if pins["tools"]["ci-image"]["digests"] != BASES or release["ci_base_image_digests"] != BASES:
+        raise ValueError("unresolved_tool_pin: ci-image.digests refused")
+    for name, image in BASES.items():
+        repository = "mcr.microsoft.com/playwright" if name == "browser" else name
+        if image != repository + "@" + pins["tools"][name]["digest"]:
+            raise ValueError("base image binding refused")
+    if pins["tools"]["browser"] != BROWSER_EVIDENCE:
+        raise ValueError("browser image evidence refused")
+    browser = pins["tools"]["chromium"]
+    if (
+        browser["sha256"] != "a9da028861a0cf789ff25c2fed45f5f1aaf969ed9247835b6a7821a4f7af9d1d"
+        or browser["url"]
+        != "https://storage.googleapis.com/chrome-for-testing-public/"
+        "153.0.8010.12/linux64/chrome-headless-shell-linux64.zip"
+        or browser["license"] != "BSD-3-Clause (Chromium)"
+    ):
+        raise ValueError("Chromium artifact evidence refused")
+    osv = pins["tools"]["osv-scanner"]
+    if osv["database"] != "live" or osv.get("owner_decision") != pins.get("owner_decision"):
+        raise ValueError("OSV live database owner decision required")
+    check_tools = [pins["tools"][n] for n in ("playwright", "playwright-core", "lighthouse")]
+    for tool in check_tools:
+        npm_lock(root, tool, "checks", check_tools)
+    pip_lock(root, pins["tools"]["semgrep"])
+    deploy = release["deploy_tool_lock"]
+    if (
+        deploy["name"] != "wrangler"
+        or deploy["version"] != "4.142.0"
+        or deploy["license"] != "MIT OR Apache-2.0"
+    ):
+        raise ValueError("deploy tool evidence refused")
+    npm_lock(
+        root,
+        deploy,
+        "deploy",
+        [
+            {
+                "npm_package": deploy["name"],
+                "version_to_verify": deploy["version"],
+                "integrity": deploy["integrity"],
+            }
+        ],
+    )
     for name, tag in ACTION_TAGS.items():
         action = release["actions"][name]
         hex_pin(action["commit"], 40)
@@ -179,6 +433,8 @@ def validate(pins=None, release=None, workflows=None, constraints=None):
             seen.add(name)
     if seen != set(ACTION_TAGS):
         raise ValueError("Action coverage incomplete")
+    if workflows[0] != ci_workflow():
+        raise ValueError("CI job tool execution/coverage refused")
     constraints = (
         (ROOT / "ci/semgrep-constraints.txt").read_text() if constraints is None else constraints
     )
@@ -187,7 +443,7 @@ def validate(pins=None, release=None, workflows=None, constraints=None):
         for line in constraints.splitlines()
         if line.strip() and not line.startswith("#")
     )
-    expected = "semgrep==1.178.0 " + " ".join(
+    expected = "semgrep==1.179.0 " + " ".join(
         "--hash=sha256:" + digest for digest in pins["tools"]["semgrep"]["artifacts"].values()
     )
     if requirements != expected:

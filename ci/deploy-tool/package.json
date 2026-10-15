@@ -1,0 +1,1 @@
+{"name":"foundry-landing-deploy-tool","version":"1.0.0","private":true,"dependencies":{"wrangler":"4.142.0"},"overrides":{"undici":"7.29.1","sharp":"0.35.5"}}
